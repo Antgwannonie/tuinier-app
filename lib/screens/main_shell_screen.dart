@@ -8,7 +8,6 @@ import '../data/garden_scan_prefs_store.dart';
 import '../data/weather_prefs_store.dart';
 import 'garden_calendar_screen.dart';
 import 'home_screen.dart';
-import 'my_garden_screen.dart';
 import 'plant_scan_screen.dart';
 import 'weather_screen.dart';
 
@@ -112,13 +111,6 @@ class MainShellScreenState extends State<MainShellScreen> {
               scanPrefs: widget.scanPrefs,
               initialVegetableId: _scanVegetableId,
             ),
-            MyGardenScreen(
-              repository: widget.repository,
-              gardenStore: widget.gardenStore,
-              profileStore: widget.profileStore,
-              scanPrefs: widget.scanPrefs,
-              onGoToPlantScan: goToPlantScan,
-            ),
           ],
         ),
       ),
@@ -134,9 +126,9 @@ class MainShellScreenState extends State<MainShellScreen> {
               onDestinationSelected: _goToTab,
               destinations: const [
                 NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: 'Start',
+                  icon: Icon(Icons.yard_outlined),
+                  selectedIcon: Icon(Icons.yard),
+                  label: 'Mijn moestuin',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.calendar_month_outlined),
@@ -152,11 +144,6 @@ class MainShellScreenState extends State<MainShellScreen> {
                   icon: Icon(Icons.photo_camera_outlined),
                   selectedIcon: Icon(Icons.photo_camera),
                   label: 'Scan',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.yard_outlined),
-                  selectedIcon: Icon(Icons.yard),
-                  label: 'Moestuin',
                 ),
               ],
             ),

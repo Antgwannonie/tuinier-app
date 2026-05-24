@@ -11,6 +11,8 @@ import '../data/garden_scan_prefs_store.dart';
 import '../widgets/home_moestuin_actions.dart';
 import '../widgets/vegetable_search_button.dart';
 import '../widgets/vegetable_thumbnail.dart';
+import 'add_vegetable_screen.dart';
+import 'my_garden_screen.dart';
 import 'vegetable_detail_screen.dart';
 import 'vegetable_list_screen.dart';
 
@@ -55,6 +57,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onGardenChanged() => setState(() {});
 
+  void _openAddVegetable() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => AddVegetableScreen(
+          repository: widget.repository,
+          gardenStore: widget.gardenStore,
+          profileStore: widget.profileStore,
+        ),
+      ),
+    );
+  }
+
+  void _openGardenManage() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => MyGardenScreen(
+          repository: widget.repository,
+          gardenStore: widget.gardenStore,
+          profileStore: widget.profileStore,
+          scanPrefs: widget.scanPrefs,
+          onGoToPlantScan: widget.onGoToPlantScan,
+        ),
+      ),
+    );
+  }
+
   List<MonthTaskEntry> _entriesForMonth(int month, GardenTaskType? filter) {
     var entries = monthTasksFor(month, taskFilter: filter);
     switch (_scope) {
@@ -85,7 +113,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tuinier'),
+        title: const Text('Mijn moestuin'),
+        actions: [
+          IconButton(
+            tooltip: 'Lijst en instellingen',
+            icon: const Icon(Icons.tune),
+            onPressed: _openGardenManage,
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAddVegetable,
+        tooltip: 'Groente toevoegen',
+        child: const Icon(Icons.add),
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
