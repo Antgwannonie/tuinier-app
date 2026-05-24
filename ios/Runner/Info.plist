@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Maak een foto van je plant voor AI-analyse van de groeifase.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kies een foto van je plant voor AI-analyse.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

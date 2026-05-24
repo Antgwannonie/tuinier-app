@@ -19,6 +19,8 @@ class Vegetable {
     required this.harvestTips,
     required this.commonIssues,
     required this.keywords,
+    this.growthCategory,
+    this.cropDuration,
   });
 
   final String id;
@@ -50,6 +52,12 @@ class Vegetable {
   /// Voor zoeken; lowercase fragmenten.
   final List<String> keywords;
 
+  /// bv. "Snelle groeiers", "Middelmatige groeiers".
+  final String? growthCategory;
+
+  /// bv. "±25–35 dagen" tussen zaai/plant en oogst.
+  final String? cropDuration;
+
   bool matchesQuery(String raw) {
     final q = raw.trim().toLowerCase();
     if (q.isEmpty) return true;
@@ -57,6 +65,7 @@ class Vegetable {
       nameNl,
       if (nameLatin != null) nameLatin!,
       family,
+      if (growthCategory != null) growthCategory!,
       ...keywords,
     ].join(' ').toLowerCase();
     return hay.contains(q);

@@ -37,6 +37,9 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Lokale API-sleutels (nooit committen)
+lib/config/local_gemini_key.dart
+
 # Android Studio
 /android/app/debug
 /android/app/profile
