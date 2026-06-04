@@ -2,8 +2,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../models/garden_note.dart';
 import '../models/garden_plant_profile.dart';
 import '../models/vegetable.dart';
+import 'garden_notes_store.dart';
+import 'crop_harvest_kind.dart';
 import 'garden_plant_schedule.dart';
 import 'garden_profile_store.dart';
 import 'my_garden_store.dart';
@@ -21,6 +24,7 @@ class GardenNotificationService {
 
   static const _channelId = 'tuinier_moestuin';
   static const _baseId = 2000;
+  static const _notesBaseId = 4000;
 
   Future<void> init() async {
     if (!_tzReady) {
@@ -52,6 +56,7 @@ class GardenNotificationService {
     required GardenProfileStore profileStore,
     required MyGardenStore gardenStore,
     required VegetableRepository repository,
+    GardenNotesStore? notesStore,
     required bool enabled,
     required int daysUntilFirstPhoto,
     required int weeklyScanIntervalDays,
@@ -84,6 +89,30 @@ class GardenNotificationService {
         slot++;
       }
     }
+
+    if (notesStore != null) {
+      for (final note in notesStore.all) {
+        if (note.source != GardenNoteSource.user) continue;
+        if (!note.notify) continue;
+        final when = DateTime(
+          note.date.year,
+          note.date.month,
+          note.date.day,
+          9,
+          0,
+        );
+        final prefix =
+            note.source == GardenNoteSource.ai ? 'AI-tuin' : 'Notitie';
+        await _schedule(
+          id: _notesBaseId + (note.id.hashCode.abs() % 500),
+          when: when,
+          title: '$prefix — ${note.title}',
+          body: note.body.length > 120
+              ? '${note.body.substring(0, 117)}…'
+              : note.body,
+        );
+      }
+    }
   }
 
   List<_ScheduledNotify> _upcomingNotifications(
@@ -99,19 +128,39 @@ class GardenNotificationService {
     if (!profile.isPlanted) return out;
 
     if (profile.lastAnalysis == null) {
-      final due = firstPhotoDueDate(
+      var firstPrompt = DateTime(now.year, now.month, now.day, 9, 30);
+      if (!firstPrompt.isAfter(now)) {
+        firstPrompt = firstPrompt.add(const Duration(days: 1));
+      }
+      out.add(
+        _ScheduledNotify(
+          when: firstPrompt,
+          title: 'Eerste foto — $name',
+          body:
+              'Start je plantgeschiedenis: maak een foto van het zaadbed of de '
+              'plek in de grond — ook zonder zichtbare kiem.',
+        ),
+      );
+      if (firstPhotoNotificationDue(
         profile,
         daysUntilFirstPhoto: daysUntilFirstPhoto,
-      );
-      if (!due.isBefore(now)) {
-        out.add(
-          _ScheduledNotify(
-            when: DateTime(due.year, due.month, due.day, 9, 30),
-            title: 'Eerste foto — $name',
-            body:
-                'Je plant staat in de grond. Maak een foto in Plant scan voor persoonlijke data.',
-          ),
+      )) {
+        final due = firstPhotoDueDate(
+          profile,
+          daysUntilFirstPhoto: daysUntilFirstPhoto,
         );
+        final reminder = DateTime(due.year, due.month, due.day, 9, 30);
+        if (reminder.isAfter(firstPrompt)) {
+          out.add(
+            _ScheduledNotify(
+              when: reminder,
+              title: 'Herinnering — $name',
+              body:
+                  'Nog geen eerste scan? Leg je plant vast voor persoonlijke '
+                  'voortgang in de app.',
+            ),
+          );
+        }
       }
     } else {
       var scanDue = profile.nextScanDue ??
@@ -129,29 +178,59 @@ class GardenNotificationService {
         ),
       );
 
-      final harvest = profile.predictedHarvestAt;
-      if (harvest != null && harvest.isAfter(now)) {
-        final remind = harvest.subtract(const Duration(days: 2));
-        if (remind.isAfter(now)) {
+      final bloomCrop = isMoestuinBloomCrop(veg);
+      if (!bloomCrop) {
+        final harvest = profile.predictedHarvestAt;
+        if (harvest != null && harvest.isAfter(now)) {
+          final remind = harvest.subtract(const Duration(days: 2));
+          if (remind.isAfter(now)) {
+            out.add(
+              _ScheduledNotify(
+                when: DateTime(remind.year, remind.month, remind.day, 9, 0),
+                title: 'Oogst nadert — $name',
+                body: profile.lastAnalysis?.harvestWindowLabel ??
+                    'Binnenkort oogsten volgens je laatste scan.',
+              ),
+            );
+          }
           out.add(
             _ScheduledNotify(
-              when: DateTime(remind.year, remind.month, remind.day, 9, 0),
-              title: 'Oogst nadert — $name',
-              body: profile.lastAnalysis?.harvestWindowLabel ??
-                  'Binnenkort oogsten volgens je laatste scan.',
+              when: DateTime(harvest.year, harvest.month, harvest.day, 8, 30),
+              title: 'Oogstdag — $name',
+              body:
+                  'Volgens je AI-scan is vandaag een goed moment om te oogsten.',
             ),
           );
         }
-        out.add(
-          _ScheduledNotify(
-            when: DateTime(harvest.year, harvest.month, harvest.day, 8, 30),
-            title: 'Oogstdag — $name',
-            body: 'Volgens je AI-scan is vandaag een goed moment om te oogsten.',
-          ),
-        );
       }
 
-      if (isReadyToHarvest(profile)) {
+      if (isEdibleMoestuinBloomCrop(veg) &&
+          showEdibleBloomHarvestSection(profile, veg)) {
+        final bloomNote = bloomHintFromProfile(profile);
+        out.add(
+          _ScheduledNotify(
+            when: DateTime(now.year, now.month, now.day, 11, 0)
+                .add(const Duration(hours: 1)),
+            title: 'In bloei — $name',
+            body: bloomNote.trim().isNotEmpty
+                ? '$bloomNote Plukken om te eten of seizoen afronden kan in de app.'
+                : 'Eetbaar of laten uitbloeien — open Tuinier bij je plant.',
+          ),
+        );
+      } else if (isOrnamentalOnlyMoestuinCrop(veg) &&
+          showOrnamentalFinishSection(profile, veg)) {
+        final bloomNote = bloomHintFromProfile(profile);
+        out.add(
+          _ScheduledNotify(
+            when: DateTime(now.year, now.month, now.day, 11, 0)
+                .add(const Duration(hours: 1)),
+            title: 'In bloei — $name',
+            body: bloomNote.trim().isNotEmpty
+                ? bloomNote
+                : 'Je moestuinbloem doet het goed — open Tuinier voor het advies.',
+          ),
+        );
+      } else if (isReadyToHarvest(profile, vegetable: veg)) {
         out.add(
           _ScheduledNotify(
             when: DateTime(now.year, now.month, now.day, 11, 0)

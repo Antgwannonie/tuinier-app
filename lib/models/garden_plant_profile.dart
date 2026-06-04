@@ -55,6 +55,15 @@ class GardenPlantProfile {
     this.scanHistory = const [],
     this.predictedHarvestAt,
     this.nextScanDue,
+    this.lastScanImageFingerprint,
+    this.lastScanPhotoPath,
+    this.scanPhotoPaths = const [],
+    this.plantHealthAcknowledged = false,
+    this.plantingDateUnknown = false,
+    this.warningsDismissedFromBell = false,
+    this.harvestedPercent = 0,
+    this.archivedAt,
+    this.moestuinBatchId,
   });
 
   final String vegetableId;
@@ -69,6 +78,35 @@ class GardenPlantProfile {
   final DateTime? predictedHarvestAt;
   final DateTime? nextScanDue;
 
+  /// Vingerafdruk van de laatste scanfoto (zelfde foto herkennen).
+  final String? lastScanImageFingerprint;
+
+  /// Laatste opgeslagen scanfoto (lokaal pad).
+  final String? lastScanPhotoPath;
+
+  /// Paden van opgeslagen scans, zelfde volgorde als [scanHistory].
+  final List<String> scanPhotoPaths;
+
+  /// Gebruiker heeft actie ondernomen op AI-waarschuwingen (verbergt melding).
+  final bool plantHealthAcknowledged;
+
+  /// Zaai-/plantdatum is onbekend; geen kalenderwaarschuwing op ingevulde datum.
+  final bool plantingDateUnknown;
+
+  /// Verborgen in meldingen-bel; op plantdetail blijft zichtbaar tot afgehandeld.
+  final bool warningsDismissedFromBell;
+
+  /// Oogstvoortgang voor dit gewas (0..100).
+  final int harvestedPercent;
+
+  /// Gezet wanneer het gewas uit de actieve moestuin gaat (history).
+  final DateTime? archivedAt;
+
+  /// Zelfde id voor alle planten bij «Maak nieuwe moestuin» (herstel in één keer).
+  final String? moestuinBatchId;
+
+  bool get isArchived => archivedAt != null;
+
   GardenPlantProfile copyWith({
     DateTime? plantedAt,
     GardenLocation? location,
@@ -81,6 +119,19 @@ class GardenPlantProfile {
     DateTime? nextScanDue,
     bool clearHarvest = false,
     bool clearNextScan = false,
+    String? lastScanImageFingerprint,
+    bool clearScanFingerprint = false,
+    String? lastScanPhotoPath,
+    bool clearLastScanPhoto = false,
+    List<String>? scanPhotoPaths,
+    bool? plantHealthAcknowledged,
+    bool? plantingDateUnknown,
+    bool? warningsDismissedFromBell,
+    int? harvestedPercent,
+    DateTime? archivedAt,
+    bool clearArchivedAt = false,
+    String? moestuinBatchId,
+    bool clearMoestuinBatchId = false,
   }) {
     return GardenPlantProfile(
       vegetableId: vegetableId,
@@ -94,6 +145,24 @@ class GardenPlantProfile {
       predictedHarvestAt:
           clearHarvest ? null : (predictedHarvestAt ?? this.predictedHarvestAt),
       nextScanDue: clearNextScan ? null : (nextScanDue ?? this.nextScanDue),
+      lastScanImageFingerprint: clearScanFingerprint
+          ? null
+          : (lastScanImageFingerprint ?? this.lastScanImageFingerprint),
+      lastScanPhotoPath: clearLastScanPhoto
+          ? null
+          : (lastScanPhotoPath ?? this.lastScanPhotoPath),
+      scanPhotoPaths: scanPhotoPaths ?? this.scanPhotoPaths,
+      plantHealthAcknowledged:
+          plantHealthAcknowledged ?? this.plantHealthAcknowledged,
+      plantingDateUnknown:
+          plantingDateUnknown ?? this.plantingDateUnknown,
+      warningsDismissedFromBell:
+          warningsDismissedFromBell ?? this.warningsDismissedFromBell,
+      harvestedPercent: harvestedPercent ?? this.harvestedPercent,
+      archivedAt: clearArchivedAt ? null : (archivedAt ?? this.archivedAt),
+      moestuinBatchId: clearMoestuinBatchId
+          ? null
+          : (moestuinBatchId ?? this.moestuinBatchId),
     );
   }
 
@@ -101,6 +170,17 @@ class GardenPlantProfile {
     return GardenPlantProfile(
       vegetableId: vegetableId,
       plantedAt: planted ?? DateTime.now(),
+      isPlanted: false,
+    );
+  }
+
+  /// Kopie voor opnieuw starten in Mijn moestuin; history-profiel blijft ongewijzigd.
+  GardenPlantProfile freshSeasonCopy() {
+    return GardenPlantProfile(
+      vegetableId: vegetableId,
+      plantedAt: DateTime.now(),
+      location: location,
+      sunLevel: sunLevel,
       isPlanted: false,
     );
   }
@@ -116,6 +196,16 @@ class GardenPlantProfile {
         if (predictedHarvestAt != null)
           'predictedHarvestAt': predictedHarvestAt!.toIso8601String(),
         if (nextScanDue != null) 'nextScanDue': nextScanDue!.toIso8601String(),
+        if (lastScanImageFingerprint != null)
+          'lastScanImageFingerprint': lastScanImageFingerprint,
+        if (lastScanPhotoPath != null) 'lastScanPhotoPath': lastScanPhotoPath,
+        'scanPhotoPaths': scanPhotoPaths,
+        'plantHealthAcknowledged': plantHealthAcknowledged,
+        'plantingDateUnknown': plantingDateUnknown,
+        'warningsDismissedFromBell': warningsDismissedFromBell,
+        'harvestedPercent': harvestedPercent,
+        if (archivedAt != null) 'archivedAt': archivedAt!.toIso8601String(),
+        if (moestuinBatchId != null) 'moestuinBatchId': moestuinBatchId,
       };
 
   factory GardenPlantProfile.fromJson(Map<String, dynamic> json) {
@@ -152,6 +242,25 @@ class GardenPlantProfile {
       scanHistory: history,
       predictedHarvestAt: harvestAt,
       nextScanDue: nextScan,
+      lastScanImageFingerprint:
+          json['lastScanImageFingerprint'] as String?,
+      lastScanPhotoPath: json['lastScanPhotoPath'] as String?,
+      scanPhotoPaths: (json['scanPhotoPaths'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .toList(),
+      plantHealthAcknowledged:
+          json['plantHealthAcknowledged'] as bool? ?? false,
+      plantingDateUnknown: json['plantingDateUnknown'] as bool? ?? false,
+      warningsDismissedFromBell:
+          json['warningsDismissedFromBell'] as bool? ?? false,
+      harvestedPercent: ((json['harvestedPercent'] as num?) ?? 0)
+          .round()
+          .clamp(0, 100)
+          .toInt(),
+      archivedAt: json['archivedAt'] != null
+          ? DateTime.parse(json['archivedAt'] as String)
+          : null,
+      moestuinBatchId: json['moestuinBatchId'] as String?,
     );
   }
 }

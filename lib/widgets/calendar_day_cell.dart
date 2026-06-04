@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/planting_calendar.dart';
 import '../data/vegetable_image_info.dart';
+import '../models/garden_note.dart';
 import '../models/garden_personal_event.dart';
 
 /// Eén dag in de maandkalender — past zich aan de celgrootte aan (geen overflow).
@@ -11,6 +12,7 @@ class CalendarDayCell extends StatelessWidget {
     required this.day,
     required this.activities,
     this.personalEvents = const [],
+    this.dayNotes = const [],
     required this.isToday,
     this.onTap,
   });
@@ -18,6 +20,7 @@ class CalendarDayCell extends StatelessWidget {
   final int day;
   final List<VegetableMonthActivity> activities;
   final List<GardenPersonalEvent> personalEvents;
+  final List<GardenNote> dayNotes;
   final bool isToday;
   final VoidCallback? onTap;
 
@@ -37,7 +40,12 @@ class CalendarDayCell extends StatelessWidget {
         .take(2)
         .join();
 
-    final hasContent = activities.isNotEmpty || personalEvents.isNotEmpty;
+    final noteMark = dayNotes.any((n) => n.onCalendar)
+        ? (dayNotes.any((n) => n.source == GardenNoteSource.user) ? '📝' : '🤖')
+        : '';
+    final hasContent = activities.isNotEmpty ||
+        personalEvents.isNotEmpty ||
+        noteMark.isNotEmpty;
 
     final bg = isToday
         ? t.colorScheme.primaryContainer
@@ -86,6 +94,11 @@ class CalendarDayCell extends StatelessWidget {
                             if (personalMarks.isNotEmpty)
                               Text(
                                 personalMarks,
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                            if (noteMark.isNotEmpty)
+                              Text(
+                                noteMark,
                                 style: const TextStyle(fontSize: 11),
                               ),
                           ],

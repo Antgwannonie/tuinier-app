@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'vegetable_id_migrations.dart';
+
 /// Lokaal opgeslagen lijst met groenten die de gebruiker zelf verbouwt.
 /// Later: sync met account + meldingen alleen voor deze ids.
 class MyGardenStore extends ChangeNotifier {
@@ -28,11 +30,16 @@ class MyGardenStore extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getStringList(_storageKey) ?? [];
+    final migrated = normalizeVegetableIds(saved);
     _ids
       ..clear()
-      ..addAll(saved);
+      ..addAll(migrated);
     _notificationsEnabled = prefs.getBool(_notificationsKey) ?? true;
     _loaded = true;
+    if (migrated.length != saved.length ||
+        !saved.every((id) => migrated.contains(normalizeVegetableId(id)))) {
+      await _persist();
+    }
     notifyListeners();
   }
 

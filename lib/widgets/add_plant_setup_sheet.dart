@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../data/planting_timing_advice.dart';
 import '../models/garden_plant_profile.dart';
+import '../models/vegetable.dart';
+import 'plant_setup_sheet_ui.dart';
+import 'planting_timing_warning_card.dart';
 
 class AddPlantSetupResult {
   const AddPlantSetupResult({
@@ -8,6 +12,7 @@ class AddPlantSetupResult {
     required this.location,
     required this.sunLevel,
     this.isPlanted = true,
+    this.plantingDateUnknown = false,
   });
 
   final DateTime plantedAt;
@@ -16,25 +21,33 @@ class AddPlantSetupResult {
 
   /// `false` = alleen op lijst, nog niet in de grond.
   final bool isPlanted;
+
+  /// Geen seizoenswaarschuwing op ingevulde datum.
+  final bool plantingDateUnknown;
 }
 
 /// Bij toevoegen: wanneer geplant, locatie en zon.
 Future<AddPlantSetupResult?> showAddPlantSetupSheet(
   BuildContext context, {
-  required String vegetableName,
+  required Vegetable vegetable,
 }) {
   return showModalBottomSheet<AddPlantSetupResult>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (ctx) => _AddPlantSetupSheet(vegetableName: vegetableName),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(ctx).bottom,
+      ),
+      child: _AddPlantSetupSheet(vegetable: vegetable),
+    ),
   );
 }
 
 class _AddPlantSetupSheet extends StatefulWidget {
-  const _AddPlantSetupSheet({required this.vegetableName});
+  const _AddPlantSetupSheet({required this.vegetable});
 
-  final String vegetableName;
+  final Vegetable vegetable;
 
   @override
   State<_AddPlantSetupSheet> createState() => _AddPlantSetupSheetState();
@@ -45,84 +58,90 @@ class _AddPlantSetupSheetState extends State<_AddPlantSetupSheet> {
   GardenLocation _location = GardenLocation.outdoor;
   SunLevel _sun = SunLevel.medium;
   bool _alreadyPlanted = true;
+  bool _plantingDateUnknown = false;
+
+  GardenPlantProfile get _previewProfile => GardenPlantProfile(
+        vegetableId: widget.vegetable.id,
+        plantedAt: _plantedAt,
+        location: _location,
+        sunLevel: _sun,
+        isPlanted: _alreadyPlanted,
+        plantingDateUnknown: _plantingDateUnknown,
+      );
+
+  PlantingTimingAssessment get _timingPreview => assessPlantingTiming(
+        vegetable: widget.vegetable,
+        profile: _previewProfile,
+      );
+
+  String get _dateLabel => _alreadyPlanted
+      ? 'Gezaaid / geplant op'
+      : 'Gepland voor';
+
+  Future<void> _pickDate() async {
+    final picked = await pickPlantSetupDate(context, initial: _plantedAt);
+    if (picked != null) setState(() => _plantedAt = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
+    final timing = _timingPreview;
+    final showSeasonPreview =
+        !_plantingDateUnknown && timing.showOnInfoTab;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+    return PlantSetupSheetFrame(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              '${widget.vegetableName} toevoegen',
-              style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            PlantSetupSheetHeader(
+              title: widget.vegetable.nameNl,
+              badge: 'Toevoegen',
+              subtitle:
+                  'Datum en plek helpen groei en oogst beter inschatten.',
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Zo schat de app jouw groei en oogst realistischer in.',
-              style: t.textTheme.bodyMedium?.copyWith(
-                color: t.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Staat al in de grond'),
-              subtitle: const Text(
-                'Uit = alleen plannen; je vinkt later “geplant” aan op Start.',
-              ),
+            const SizedBox(height: 16),
+            PlantSetupPlantedSwitch(
               value: _alreadyPlanted,
               onChanged: (v) => setState(() => _alreadyPlanted = v),
             ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                _alreadyPlanted ? 'Geplant / gezaaid op' : 'Gepland voor',
-              ),
-              subtitle: Text(
-                '${_plantedAt.day}-${_plantedAt.month}-${_plantedAt.year}',
-              ),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _plantedAt,
-                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                  lastDate: DateTime.now(),
-                );
-                if (picked != null) setState(() => _plantedAt = picked);
-              },
-            ),
-            Text('Locatie', style: t.textTheme.titleSmall),
-            Wrap(
-              spacing: 8,
-              children: GardenLocation.values.map((loc) {
-                return ChoiceChip(
-                  label: Text(loc.label),
-                  selected: _location == loc,
-                  onSelected: (_) => setState(() => _location = loc),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-            Text('Zon op deze plek', style: t.textTheme.titleSmall),
-            Wrap(
-              spacing: 8,
-              children: SunLevel.values.map((sun) {
-                return ChoiceChip(
-                  label: Text(sun.label),
-                  selected: _sun == sun,
-                  onSelected: (_) => setState(() => _sun = sun),
-                );
-              }).toList(),
+            const SizedBox(height: 16),
+            PlantSetupDateCard(
+              dateLabel: _dateLabel,
+              plantedAt: _plantedAt,
+              dateUnknown: _plantingDateUnknown,
+              onDateUnknownChanged: (v) =>
+                  setState(() => _plantingDateUnknown = v),
+              onPickDate: _pickDate,
             ),
             const SizedBox(height: 20),
-            FilledButton(
+            const PlantSetupSectionLabel('Locatie'),
+            PlantSetupSurfaceCard(
+              child: PlantSetupOptionChips<GardenLocation>(
+                options: GardenLocation.values,
+                labelFor: (l) => l.label,
+                selected: _location,
+                onSelected: (l) => setState(() => _location = l),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const PlantSetupSectionLabel('Zon op deze plek'),
+            PlantSetupSurfaceCard(
+              child: PlantSetupOptionChips<SunLevel>(
+                options: SunLevel.values,
+                labelFor: (s) => s.label,
+                selected: _sun,
+                onSelected: (s) => setState(() => _sun = s),
+              ),
+            ),
+            if (_plantingDateUnknown || showSeasonPreview) ...[
+              const SizedBox(height: 16),
+              PlantingTimingWarningCard(assessment: timing),
+            ],
+            const SizedBox(height: 24),
+            PlantSetupConfirmButton(
+              label: 'Toevoegen aan Mijn moestuin',
               onPressed: () => Navigator.pop(
                 context,
                 AddPlantSetupResult(
@@ -130,9 +149,9 @@ class _AddPlantSetupSheetState extends State<_AddPlantSetupSheet> {
                   location: _location,
                   sunLevel: _sun,
                   isPlanted: _alreadyPlanted,
+                  plantingDateUnknown: _plantingDateUnknown,
                 ),
               ),
-              child: const Text('Toevoegen aan Mijn moestuin'),
             ),
           ],
         ),

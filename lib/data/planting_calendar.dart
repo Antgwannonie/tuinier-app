@@ -1,3 +1,7 @@
+import 'planting_calendar_fallback.dart';
+import 'planting_calendar_supplement.dart';
+import 'vegetables_data.dart';
+
 /// Wat er in een bepaalde maand met een gewas aan de hand is.
 enum GardenTaskType {
   preSow,
@@ -66,9 +70,9 @@ int activityCalendarDay(VegetableMonthActivity activity) {
 const List<VegetableMonthActivity> kPlantingCalendar = [
   VegetableMonthActivity(
     vegetableId: 'radijs',
-    type: GardenTaskType.plantOutdoors,
-    months: [5, 6],
-    hint: 'Zaaien of planten; snelle oogst binnen ~5 weken.',
+    type: GardenTaskType.sowOutdoors,
+    months: [3, 4, 5, 6, 7, 8],
+    hint: 'Doorzaaien mogelijk; snelle oogst.',
   ),
   VegetableMonthActivity(
     vegetableId: 'radijs',
@@ -134,13 +138,20 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
   ),
   VegetableMonthActivity(
     vegetableId: 'bosui',
-    type: GardenTaskType.plantOutdoors,
-    months: [5],
+    type: GardenTaskType.sowOutdoors,
+    months: [3, 4, 5],
+    hint: 'Hoofdzaai lente (lente-ui).',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'bosui',
+    type: GardenTaskType.sowOutdoors,
+    months: [7, 8],
+    hint: '2e ronde zaaien (herfst oogst).',
   ),
   VegetableMonthActivity(
     vegetableId: 'bosui',
     type: GardenTaskType.harvest,
-    months: [7, 8],
+    months: [5, 6, 7, 8, 9, 10],
   ),
   VegetableMonthActivity(
     vegetableId: 'wortel',
@@ -166,9 +177,15 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
   ),
   VegetableMonthActivity(
     vegetableId: 'bonen_sperzie',
+    type: GardenTaskType.preSow,
+    months: [5],
+    hint: 'Optioneel voorzaaien in kas.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'bonen_sperzie',
     type: GardenTaskType.plantOutdoors,
-    months: [6],
-    hint: 'Pas na ijsheiligen / half juni.',
+    months: [5, 6],
+    hint: 'Buiten na ijsheiligen (half mei–juni).',
   ),
   VegetableMonthActivity(
     vegetableId: 'bonen_sperzie',
@@ -178,7 +195,8 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
   VegetableMonthActivity(
     vegetableId: 'snijbonen',
     type: GardenTaskType.plantOutdoors,
-    months: [6],
+    months: [5, 6],
+    hint: 'Warmteminners; na vorst.',
   ),
   VegetableMonthActivity(
     vegetableId: 'snijbonen',
@@ -295,9 +313,27 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
   // Extra veelgebruikte gewassen
   VegetableMonthActivity(
     vegetableId: 'rabarber',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4],
+    hint: 'Kroon delen of planten in voorjaar.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'rabarber',
     type: GardenTaskType.harvest,
     months: [4, 5, 6],
     hint: 'Stop oogst vóór juli.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'asperge',
+    type: GardenTaskType.preSow,
+    months: [2, 3],
+    hint: 'Zaaien of kroonplanten voorbereiden.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'asperge',
+    type: GardenTaskType.plantOutdoors,
+    months: [4],
+    hint: 'Kroonplanten in greppel (NL).',
   ),
   VegetableMonthActivity(
     vegetableId: 'asperge',
@@ -306,8 +342,20 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
   ),
   VegetableMonthActivity(
     vegetableId: 'prei',
+    type: GardenTaskType.preSow,
+    months: [2, 3, 4],
+    hint: 'Voorzaaien in bak.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'prei',
     type: GardenTaskType.plantOutdoors,
-    months: [5, 6],
+    months: [5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'prei',
+    type: GardenTaskType.harvest,
+    months: [10, 11, 12, 1, 2, 3],
+    hint: 'Langzaam oogsten door winter.',
   ),
   VegetableMonthActivity(
     vegetableId: 'komkommer',
@@ -565,14 +613,327 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
     months: [7, 8, 9],
   ),
   VegetableMonthActivity(
-    vegetableId: 'lente_ui',
+    vegetableId: 'zonnebloem',
     type: GardenTaskType.sowOutdoors,
-    months: [3, 4, 5, 6, 7, 8],
+    months: [4, 5],
   ),
   VegetableMonthActivity(
-    vegetableId: 'lente_ui',
+    vegetableId: 'zonnebloem',
     type: GardenTaskType.harvest,
-    months: [5, 6, 7, 8, 9, 10],
+    months: [8, 9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'mango',
+    type: GardenTaskType.preSow,
+    months: [3, 4, 5],
+    hint: 'Pit of jonge plant binnen; min. 18–20 °C en veel licht.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'mango',
+    type: GardenTaskType.plantOutdoors,
+    months: [6, 7, 8],
+    hint: 'Alleen op warm terras of in kas.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'mango',
+    type: GardenTaskType.harvest,
+    months: [7, 8, 9],
+    hint: 'In kas of serre.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'avocado',
+    type: GardenTaskType.preSow,
+    months: [3, 4, 5],
+    hint: 'Pit op water of zaaien binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'avocado',
+    type: GardenTaskType.plantOutdoors,
+    months: [6, 7, 8],
+    hint: 'Potplant naar buiten na vorst.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'avocado',
+    type: GardenTaskType.harvest,
+    months: [9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'patisson',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'patisson',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'patisson',
+    type: GardenTaskType.harvest,
+    months: [7, 8, 9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'cayenne_peper',
+    type: GardenTaskType.preSow,
+    months: [2, 3],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'cayenne_peper',
+    type: GardenTaskType.plantOutdoors,
+    months: [5],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'cayenne_peper',
+    type: GardenTaskType.harvest,
+    months: [8, 9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'pinda',
+    type: GardenTaskType.sowOutdoors,
+    months: [5, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'pinda',
+    type: GardenTaskType.harvest,
+    months: [9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'pruim',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 11],
+    hint: 'Boom planten in rustperiode.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'pruim',
+    type: GardenTaskType.harvest,
+    months: [8, 9],
+  ),
+  // Extra referentiegroenten (my_garden + atlas)
+  VegetableMonthActivity(
+    vegetableId: 'ui',
+    type: GardenTaskType.preSow,
+    months: [2, 3],
+    hint: 'Zaaiplanten binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'ui',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4],
+    hint: 'Plantuien in de tuin.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'ui',
+    type: GardenTaskType.harvest,
+    months: [7, 8, 9],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'doperwt',
+    type: GardenTaskType.sowOutdoors,
+    months: [3, 4],
+    hint: 'Vroeg in het voorjaar.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'doperwt',
+    type: GardenTaskType.harvest,
+    months: [6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'boerenkool',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'boerenkool',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'boerenkool',
+    type: GardenTaskType.harvest,
+    months: [10, 11, 12, 1, 2, 3],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'broccoli',
+    type: GardenTaskType.preSow,
+    months: [3, 4, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'broccoli',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'broccoli',
+    type: GardenTaskType.harvest,
+    months: [7, 8, 9, 10, 11],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'koolrabi',
+    type: GardenTaskType.sowOutdoors,
+    months: [4, 5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'koolrabi',
+    type: GardenTaskType.harvest,
+    months: [6, 7, 8, 9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'pastinaak',
+    type: GardenTaskType.sowOutdoors,
+    months: [3, 4],
+    hint: 'Direct buiten zaaien.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'pastinaak',
+    type: GardenTaskType.harvest,
+    months: [10, 11, 12, 1, 2, 3],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'raps_kool',
+    type: GardenTaskType.preSow,
+    months: [4, 5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'raps_kool',
+    type: GardenTaskType.plantOutdoors,
+    months: [6, 7, 8],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'raps_kool',
+    type: GardenTaskType.harvest,
+    months: [9, 10, 11],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'knoflook',
+    type: GardenTaskType.plantOutdoors,
+    months: [10, 11],
+    hint: 'Winterteelt: teentjes planten.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'knoflook',
+    type: GardenTaskType.harvest,
+    months: [6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'mais',
+    type: GardenTaskType.preSow,
+    months: [4, 5],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'mais',
+    type: GardenTaskType.sowOutdoors,
+    months: [5, 6],
+    hint: 'In blokken zaaien voor bestuiving.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'mais',
+    type: GardenTaskType.harvest,
+    months: [8, 9],
+  ),
+  // Kruiden
+  VegetableMonthActivity(
+    vegetableId: 'basilicum',
+    type: GardenTaskType.preSow,
+    months: [3, 4, 5, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'basilicum',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'peterselie',
+    type: GardenTaskType.preSow,
+    months: [2, 3],
+    hint: 'Kiemt traag — geduld.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'peterselie',
+    type: GardenTaskType.sowOutdoors,
+    months: [4, 5, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'dille',
+    type: GardenTaskType.sowOutdoors,
+    months: [4, 5, 6, 7],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'tijm',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'tijm',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'munt',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4],
+    hint: 'Liever in pot tegen uitlopen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'bieslook',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4],
+    hint: 'Pol of stek in voorjaar.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'koriander',
+    type: GardenTaskType.sowOutdoors,
+    months: [4, 5, 6, 7, 8],
+    hint: 'Doorzaaien tegen doorschieten.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'salie',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'salie',
+    type: GardenTaskType.plantOutdoors,
+    months: [5],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'oregano',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'oregano',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'rozemarijn',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'rozemarijn',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6],
+    hint: 'Beschut of op zuidmuur.',
+  ),
+  // Paddestoelen (binnen)
+  VegetableMonthActivity(
+    vegetableId: 'shiitake',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Substraat inoculeren binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'oesterzwam',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Het hele jaar binnen op substraa.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'kastanjechampignon',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    hint: 'Donkere, koele ruimte binnen.',
   ),
 ];
 
@@ -586,10 +947,43 @@ class MonthTaskEntry {
   final List<VegetableMonthActivity> tasks;
 }
 
+List<VegetableMonthActivity>? _mergedCalendarCache;
+
+/// Cache legen na database-uitbreiding (tests / hot reload).
+void invalidatePlantingCalendarCache() {
+  _mergedCalendarCache = null;
+}
+
+List<VegetableMonthActivity> _baseCalendarEntries() => [
+      ...kPlantingCalendar,
+      ...kPlantingCalendarSupplement,
+    ];
+
+/// Alle zaai-/plant-/oogstregels voor elk gewas in de database.
+List<VegetableMonthActivity> allPlantingCalendarActivities() {
+  if (_mergedCalendarCache != null) return _mergedCalendarCache!;
+
+  final out = <VegetableMonthActivity>[];
+  final base = _baseCalendarEntries();
+
+  for (final vegetable in kVegetablesSeed) {
+    final explicit =
+        base.where((a) => a.vegetableId == vegetable.id).toList();
+    if (explicit.isNotEmpty) {
+      out.addAll(explicit);
+    } else {
+      out.addAll(defaultCalendarActivitiesFor(vegetable));
+    }
+  }
+
+  _mergedCalendarCache = List.unmodifiable(out);
+  return _mergedCalendarCache!;
+}
+
 /// Taaktypes die in deze maand minstens één gewas hebben.
 List<GardenTaskType> taskTypesForMonth(int month) {
   final types = <GardenTaskType>{};
-  for (final a in kPlantingCalendar) {
+  for (final a in allPlantingCalendarActivities()) {
     if (a.months.contains(month)) types.add(a.type);
   }
   return types.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -597,7 +991,7 @@ List<GardenTaskType> taskTypesForMonth(int month) {
 
 List<MonthTaskEntry> monthTasksFor(int month, {GardenTaskType? taskFilter}) {
   final byId = <String, List<VegetableMonthActivity>>{};
-  for (final a in kPlantingCalendar) {
+  for (final a in allPlantingCalendarActivities()) {
     if (!a.months.contains(month)) continue;
     if (taskFilter != null && a.type != taskFilter) continue;
     byId.putIfAbsent(a.vegetableId, () => []).add(a);
@@ -619,7 +1013,7 @@ List<VegetableMonthActivity> activitiesOnCalendarDay(
   int day, {
   Set<String>? onlyVegetableIds,
 }) {
-  return kPlantingCalendar.where((a) {
+  return allPlantingCalendarActivities().where((a) {
     if (!a.months.contains(month)) return false;
     if (activityCalendarDay(a) != day) return false;
     if (onlyVegetableIds != null &&

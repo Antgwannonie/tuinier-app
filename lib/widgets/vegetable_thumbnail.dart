@@ -28,6 +28,15 @@ class VegetableThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final info = vegetableImageFor(vegetable.id);
+
+    if (info.transparentAsset && info.assetPath != null) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: _thumbnailImage(context, info, BoxFit.contain),
+      );
+    }
+
     final bg = info.greenBackground ? _greenBg : Colors.white;
 
     return Container(
@@ -39,20 +48,47 @@ class VegetableThumbnail extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
       ),
       clipBehavior: Clip.antiAlias,
-      child: info.imageUrl != null
-          ? Image.network(
-              info.imageUrl!,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return _emojiFallback(info, progress);
-              },
-              errorBuilder: (_, __, ___) => _emojiFallback(info, null),
-            )
-          : _emojiFallback(info, null),
+      child: _thumbnailImage(context, info, BoxFit.cover),
     );
+  }
+
+  Widget _thumbnailImage(
+    BuildContext context,
+    VegetableImageInfo info,
+    BoxFit fit,
+  ) {
+    if (info.assetPath != null) {
+      final scale = info.thumbnailScale;
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final cachePx = (size * dpr * scale).round().clamp(128, 1024);
+      final image = Image.asset(
+        info.assetPath!,
+        width: size,
+        height: size,
+        fit: fit,
+        cacheWidth: cachePx,
+        cacheHeight: cachePx,
+        filterQuality: FilterQuality.high,
+        isAntiAlias: true,
+        errorBuilder: (_, __, ___) => _emojiFallback(info, null),
+      );
+      if (scale <= 1.0) return image;
+      return Transform.scale(scale: scale, child: image);
+    }
+    if (info.imageUrl != null) {
+      return Image.network(
+        info.imageUrl!,
+        width: size,
+        height: size,
+        fit: fit,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _emojiFallback(info, progress);
+        },
+        errorBuilder: (_, __, ___) => _emojiFallback(info, null),
+      );
+    }
+    return _emojiFallback(info, null);
   }
 
   Widget _emojiFallback(VegetableImageInfo info, ImageChunkEvent? progress) {

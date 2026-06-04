@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../data/garden_notifications_sync.dart';
 import '../data/garden_profile_store.dart';
+import '../data/garden_scan_prefs_store.dart';
 import '../data/my_garden_store.dart';
-import '../widgets/add_plant_setup_sheet.dart';
-import '../data/vegetable_groups.dart';
+import '../data/plant_search_filters.dart';
 import '../data/vegetable_repository.dart';
 import '../models/vegetable.dart';
-import '../models/vegetable_group.dart';
+import '../widgets/add_plant_setup_sheet.dart';
+import '../widgets/home_moestuin_actions.dart';
+import '../widgets/plant_search_scroll_layout.dart';
 import '../widgets/vegetable_thumbnail.dart';
 
 class AddVegetableScreen extends StatefulWidget {
@@ -16,11 +17,13 @@ class AddVegetableScreen extends StatefulWidget {
     required this.repository,
     required this.gardenStore,
     required this.profileStore,
+    required this.scanPrefs,
   });
 
   final VegetableRepository repository;
   final MyGardenStore gardenStore;
   final GardenProfileStore profileStore;
+  final GardenScanPrefsStore scanPrefs;
 
   @override
   State<AddVegetableScreen> createState() => _AddVegetableScreenState();
@@ -28,46 +31,57 @@ class AddVegetableScreen extends StatefulWidget {
 
 class _AddVegetableScreenState extends State<AddVegetableScreen> {
   final TextEditingController _search = TextEditingController();
-  String? _groupId;
+  PlantSearchCriteria _criteria = const PlantSearchCriteria();
+  String _lastQuery = '';
 
   @override
   void initState() {
     super.initState();
     widget.gardenStore.addListener(_refresh);
+    widget.profileStore.addListener(_refresh);
+    _search.addListener(_onSearchTextChanged);
   }
 
   @override
   void dispose() {
     widget.gardenStore.removeListener(_refresh);
+    widget.profileStore.removeListener(_refresh);
+    _search.removeListener(_onSearchTextChanged);
     _search.dispose();
     super.dispose();
   }
 
+  void _onSearchTextChanged() {
+    final q = _search.text;
+    if (q == _lastQuery) return;
+    _lastQuery = q;
+    setState(() {});
+  }
+
   void _refresh() => setState(() {});
 
-  VegetableGroup? get _group =>
-      _groupId == null ? null : vegetableGroupById(_groupId!);
+  List<Vegetable> get _filtered => searchFilteredPlants(
+        repository: widget.repository,
+        criteria: _criteria,
+        searchQuery: _search.text,
+      );
 
-  List<Vegetable> get _available {
-    Iterable<Vegetable> pool;
-    final group = _group;
-    if (group != null) {
-      pool = widget.repository.inGroup(group);
-    } else {
-      pool = widget.repository.all;
-    }
+  List<Vegetable> get _inGardenNotPlanted => _filtered
+      .where((v) {
+        if (!widget.gardenStore.contains(v.id)) return false;
+        final p = widget.profileStore.profileFor(v.id);
+        return p == null || !p.isPlanted;
+      })
+      .toList();
 
-    final q = _search.text.trim();
-    return pool
-        .where((v) => !widget.gardenStore.contains(v.id))
-        .where((v) => q.isEmpty || v.matchesQuery(q))
-        .toList();
-  }
+  List<Vegetable> get _available => _filtered
+      .where((v) => !widget.gardenStore.contains(v.id))
+      .toList();
 
   Future<void> _add(Vegetable v) async {
     final setup = await showAddPlantSetupSheet(
       context,
-      vegetableName: v.nameNl,
+      vegetable: v,
     );
     if (setup == null || !mounted) return;
 
@@ -78,6 +92,7 @@ class _AddVegetableScreenState extends State<AddVegetableScreen> {
       location: setup.location,
       sunLevel: setup.sunLevel,
       isPlanted: setup.isPlanted,
+      plantingDateUnknown: setup.plantingDateUnknown,
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -88,116 +103,142 @@ class _AddVegetableScreenState extends State<AddVegetableScreen> {
     );
   }
 
+  Future<void> _markPlanted(Vegetable v) async {
+    await widget.profileStore.ensureProfile(v.id);
+    await markVegetableAsPlanted(
+      context: context,
+      vegetable: v,
+      profileStore: widget.profileStore,
+      scanPrefs: widget.scanPrefs,
+    );
+    if (mounted) setState(() {});
+  }
+
+  void _resetFilters() {
+    setState(() => _criteria = const PlantSearchCriteria());
+  }
+
+  void _onCriteriaChanged(PlantSearchCriteria next) {
+    setState(() => _criteria = next);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
+    final cs = t.colorScheme;
+    final inGarden = _inGardenNotPlanted;
     final list = _available;
-    final group = _group;
+    final hasActiveFilters = _criteria.activeFilterCount > 0;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Groente toevoegen'),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(
-              'Verzameling',
-              style: t.textTheme.labelLarge?.copyWith(
-                color: t.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
+        actions: [
+          if (hasActiveFilters)
+            TextButton(
+              onPressed: _resetFilters,
+              child: const Text('Wis filters'),
             ),
-          ),
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: const Text('Alle'),
-                    selected: _groupId == null,
-                    onSelected: (_) => setState(() => _groupId = null),
+        ],
+      ),
+      body: PlantSearchScrollLayout(
+        searchController: _search,
+        onSearchChanged: (_) {},
+        criteria: _criteria,
+        onCriteriaChanged: _onCriteriaChanged,
+        bottomPadding: 96,
+        searchFillColor: Color.lerp(cs.surface, cs.primary, 0.08),
+        slivers: [
+          if (inGarden.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Text(
+                  'Staat al op je lijst — nog niet als geplant',
+                  style: t.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
                   ),
                 ),
-                ...kVegetableGroups.map((g) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(g.nameNl),
-                      selected: _groupId == g.id,
-                      onSelected: (_) =>
-                          setState(() => _groupId = _groupId == g.id ? null : g.id),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final v = inGarden[i];
+                  return ListTile(
+                    key: ValueKey('pending-${v.id}'),
+                    leading: VegetableThumbnail(vegetable: v),
+                    title: Text(v.nameNl),
+                    subtitle: const Text(
+                      'Je hebt “Staat al in de grond” uit gezet of nog niet bevestigd.',
+                    ),
+                    trailing: FilledButton.tonal(
+                      onPressed: () => _markPlanted(v),
+                      child: const Text('Geplant'),
                     ),
                   );
-                }),
-              ],
+                },
+                childCount: inGarden.length,
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              controller: _search,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Zoek binnen ${group?.nameNl ?? "alle groenten"}…',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            const SliverToBoxAdapter(child: Divider(height: 24)),
+          ],
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: Text(
+                '${list.length} om toe te voegen',
+                style: t.textTheme.labelMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
                 ),
-                isDense: true,
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Text(
-              '${list.length} om toe te voegen',
-              style: t.textTheme.labelLarge?.copyWith(
-                color: t.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: list.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        group != null
-                            ? 'Geen groenten meer in ${group.nameNl} om toe te voegen, '
-                                'of alles staat al in jouw lijst.'
-                            : 'Alles staat al in jouw lijst of geen zoekresultaat.',
-                        textAlign: TextAlign.center,
-                        style: t.textTheme.bodyLarge,
-                      ),
+          if (list.isEmpty && inGarden.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Geen resultaat.\nPas zoekterm of filters aan.',
+                    textAlign: TextAlign.center,
+                    style: t.textTheme.bodyLarge?.copyWith(
+                      color: cs.onSurfaceVariant,
                     ),
-                  )
-                : ListView.separated(
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final v = list[i];
-                      return ListTile(
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final v = list[i];
+                  return Column(
+                    key: ValueKey(v.id),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (i > 0) const Divider(height: 1),
+                      ListTile(
                         leading: VegetableThumbnail(vegetable: v),
                         title: Text(v.nameNl),
                         subtitle: Text(v.family),
                         trailing: IconButton(
                           icon: const Icon(Icons.add_circle),
-                          color: t.colorScheme.primary,
+                          color: cs.primary,
                           tooltip: 'Toevoegen',
                           onPressed: () => _add(v),
                         ),
                         onTap: () => _add(v),
-                      );
-                    },
-                  ),
-          ),
+                      ),
+                    ],
+                  );
+                },
+                childCount: list.length,
+              ),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

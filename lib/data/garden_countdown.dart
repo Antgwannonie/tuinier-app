@@ -102,6 +102,62 @@ VegetableGardenStatus? gardenStatusFor(String vegetableId, [DateTime? reference]
   return activeBest ?? futureBest;
 }
 
+/// Kalenderstatus voor één taaktype (bijv. alleen oogsten of zaaien buiten).
+VegetableGardenStatus? gardenStatusForTask(
+  String vegetableId,
+  GardenTaskType taskType, [
+  DateTime? reference,
+]) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  final year = today.year;
+
+  final activities = kPlantingCalendar
+      .where((a) => a.vegetableId == vegetableId && a.type == taskType)
+      .toList();
+  if (activities.isEmpty) return null;
+
+  VegetableGardenStatus? activeBest;
+  VegetableGardenStatus? futureBest;
+  int? futureDays;
+
+  for (final y in [year, year + 1]) {
+    for (final activity in activities) {
+      for (final month in activity.months) {
+        final start = _periodStart(y, activity, month);
+        final end = DateTime(y, month, daysInMonth(y, month));
+
+        if (!today.isBefore(start) && !today.isAfter(end)) {
+          final candidate = VegetableGardenStatus(
+            activity: activity,
+            daysUntil: 0,
+            isActiveNow: true,
+            periodStart: start,
+            periodEnd: end,
+          );
+          activeBest = candidate;
+          continue;
+        }
+
+        if (start.isAfter(today)) {
+          final days = start.difference(today).inDays;
+          if (futureDays == null || days < futureDays) {
+            futureDays = days;
+            futureBest = VegetableGardenStatus(
+              activity: activity,
+              daysUntil: days,
+              isActiveNow: false,
+              periodStart: start,
+              periodEnd: end,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return activeBest ?? futureBest;
+}
+
 /// Sorteer: eerst klaar voor actie, daarna op aantal dagen.
 int compareGardenStatus(
   VegetableGardenStatus? a,

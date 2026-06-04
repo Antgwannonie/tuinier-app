@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../data/garden_notes_store.dart';
 import '../data/garden_plant_schedule.dart';
+import '../models/garden_note.dart';
 import '../models/garden_personal_event.dart';
 import '../data/garden_profile_store.dart';
 import '../data/garden_scan_prefs_store.dart';
@@ -20,6 +22,7 @@ class MonthCalendarGrid extends StatelessWidget {
     this.gardenStore,
     this.repository,
     this.scanPrefs,
+    this.notesStore,
     required this.onDayTap,
   });
 
@@ -30,10 +33,12 @@ class MonthCalendarGrid extends StatelessWidget {
   final MyGardenStore? gardenStore;
   final VegetableRepository? repository;
   final GardenScanPrefsStore? scanPrefs;
+  final GardenNotesStore? notesStore;
   final void Function(
     int day,
     List<VegetableMonthActivity> activities,
     List<GardenPersonalEvent> personalEvents,
+    List<GardenNote> dayNotes,
   ) onDayTap;
 
   static const double _spacing = 5;
@@ -86,18 +91,23 @@ class MonthCalendarGrid extends StatelessWidget {
                     weeklyScanIntervalDays: scanPrefs!.weeklyScanIntervalDays,
                   )
                 : <GardenPersonalEvent>[];
+            final dayNotes = notesStore != null
+                ? notesStore!.forDay(DateTime(year, month, day))
+                : <GardenNote>[];
             final now = DateTime.now();
             final isToday =
                 now.year == year && now.month == month && now.day == day;
+            final hasNotes = dayNotes.any((n) => n.onCalendar);
 
             return CalendarDayCell(
               day: day,
               activities: activities,
               personalEvents: personal,
+              dayNotes: dayNotes,
               isToday: isToday,
-              onTap: activities.isEmpty && personal.isEmpty
+              onTap: activities.isEmpty && personal.isEmpty && !hasNotes
                   ? null
-                  : () => onDayTap(day, activities, personal),
+                  : () => onDayTap(day, activities, personal, dayNotes),
             );
           },
         );

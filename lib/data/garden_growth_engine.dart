@@ -2,6 +2,7 @@ import '../models/garden_plant_profile.dart';
 import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
 import 'garden_plant_schedule.dart';
+import 'garden_plant_schedule.dart';
 import 'garden_scan_prefs_store.dart';
 
 enum GrowthScheduleStatus {
@@ -83,17 +84,12 @@ PlantGrowthInsight? growthInsightFor(
 
   final analysis = profile.lastAnalysis;
   if (analysis == null) {
-    final firstDue = profile.isPlanted
-        ? firstPhotoDueDate(
-            profile,
-            daysUntilFirstPhoto: daysUntilFirstPhoto,
-          )
-        : null;
     final summary = !profile.isPlanted
         ? 'Vink “geplant” aan zodra het in de grond staat'
-        : firstDue != null && DateTime.now().isBefore(firstDue)
-            ? 'Eerste foto rond ${firstDue.day}-${firstDue.month}'
-            : 'Maak een foto in Plant scan voor een schatting';
+        : firstPhotoReminderLabel(
+            profile,
+            daysUntilFirstPhoto: daysUntilFirstPhoto,
+          );
     return PlantGrowthInsight(
       profile: profile,
       phaseLabel: null,
