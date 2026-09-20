@@ -9,6 +9,8 @@ import '../data/garden_plant_schedule.dart';
 import '../data/planting_calendar.dart';
 import '../data/planting_calendar_fallback.dart';
 import '../data/plant_health_warnings.dart';
+import '../data/plant_scheduled_actions.dart';
+import '../data/insect_scan_store.dart';
 import '../data/vegetable_repository.dart';
 import '../data/vegetable_image_info.dart';
 import '../models/garden_plant_profile.dart';
@@ -19,9 +21,10 @@ import 'vegetable_hero_image.dart';
 import '../data/plant_scan_history.dart';
 import '../data/plant_scan_photo_store.dart';
 import '../theme/tuinier_theme.dart';
+import 'moestuin_overview_card.dart';
 import 'tuin_heading.dart';
 
-/// Mijn moestuin — raster met foto, naam en actieknoppen onderaan.
+/// Mijn moestuin, raster met foto, naam en actieknoppen onderaan.
 class HomeMoestuinSection extends StatelessWidget {
   const HomeMoestuinSection({
     super.key,
@@ -37,6 +40,8 @@ class HomeMoestuinSection extends StatelessWidget {
     required this.onOpenDetail,
     this.onGoToPlantScan,
     this.onMarkedPlanted,
+    this.onOpenInsight,
+    this.insectStore,
   });
 
   final VegetableRepository repository;
@@ -48,9 +53,11 @@ class HomeMoestuinSection extends StatelessWidget {
   final Map<String, HomeTaskEntry> taskEntriesById;
   final IconData Function(GardenTaskType) taskIconFor;
   final VoidCallback onAddPlant;
-  final void Function(Vegetable veg, {bool openWarningsTab}) onOpenDetail;
+  final void Function(Vegetable veg, {bool openScanHistoryTab}) onOpenDetail;
   final void Function({String? vegetableId, bool harvestProbe})? onGoToPlantScan;
   final VoidCallback? onMarkedPlanted;
+  final VoidCallback? onOpenInsight;
+  final InsectScanStore? insectStore;
 
   List<Vegetable> _allPlants() {
     final list = <Vegetable>[];
@@ -86,9 +93,20 @@ class HomeMoestuinSection extends StatelessWidget {
       }
     }
     pending.sort((a, b) {
-      final aAct = actionsById.containsKey(a.id);
-      final bAct = actionsById.containsKey(b.id);
-      if (aAct != bAct) return aAct ? -1 : 1;
+      final aAct = actionsById[a.id];
+      final bAct = actionsById[b.id];
+      if (aAct != null && bAct != null) {
+        final sa = aAct.scheduled;
+        final sb = bAct.scheduled;
+        if (sa != null && sb != null) {
+          final cmp = comparePlantScheduledActions(sa, sb);
+          if (cmp != 0) return cmp;
+        }
+      } else if (aAct != null) {
+        return -1;
+      } else if (bAct != null) {
+        return 1;
+      }
       return a.nameNl.compareTo(b.nameNl);
     });
     return (pending: pending, done: done);
@@ -104,188 +122,94 @@ class HomeMoestuinSection extends StatelessWidget {
       scanPrefs: scanPrefs,
       month: month,
     );
-    final actionsById = {for (final a in actions) a.vegetable.id: a};
+    final actionsById = <String, GardenHomeAction>{};
+    for (final action in actions) {
+      actionsById.putIfAbsent(action.vegetable.id, () => action);
+    }
     final parts = _partitionPlants(actionsById, taskEntriesById);
 
     final plantCount = gardenStore.ids.length;
     final pendingCount = parts.pending.length;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _MoestuinHeader(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (insectStore != null)
+          MoestuinOverviewCard(
+            gardenStore: gardenStore,
+            profileStore: profileStore,
+            repository: repository,
+            insectStore: insectStore!,
             monthName: monthName,
             plantCount: plantCount,
             pendingCount: pendingCount,
-            isEmpty: gardenStore.isEmpty,
+            onOpenInsight: onOpenInsight,
           ),
-          const SizedBox(height: 14),
-          if (gardenStore.isEmpty)
-            _EmptyGardenCard(onAdd: onAddPlant)
-          else ...[
-            if (parts.pending.isNotEmpty) ...[
-              _MoestuinSectionHeader(
-                title: 'Nu aan de slag',
-                subtitle: pendingCount == 1
-                    ? '1 plant vraagt aandacht'
-                    : '$pendingCount planten vragen aandacht',
-                icon: Icons.bolt_outlined,
-                emphasized: true,
-              ),
-              const SizedBox(height: 10),
-              _PlantGrid(
-                plants: parts.pending,
-                month: month,
-                actionsById: actionsById,
-                entriesById: taskEntriesById,
-                gardenStore: gardenStore,
-                repository: repository,
-                profileStore: profileStore,
-                scanPrefs: scanPrefs,
-                taskIconFor: taskIconFor,
-                dimmed: false,
-                onOpenDetail: onOpenDetail,
-                onGoToPlantScan: onGoToPlantScan,
-                onMarkedPlanted: onMarkedPlanted,
-              ),
-            ],
-            if (parts.done.isNotEmpty) ...[
-              if (parts.pending.isNotEmpty) const SizedBox(height: 20),
-              _MoestuinSectionHeader(
-                title: 'Even rust',
-                subtitle: parts.done.length == 1
-                    ? '1 plant — geen actie nu'
-                    : '${parts.done.length} planten — geen actie nu',
-                icon: Icons.check_circle_outline,
-                emphasized: false,
-              ),
-              const SizedBox(height: 10),
-              _PlantGrid(
-                plants: parts.done,
-                month: month,
-                actionsById: actionsById,
-                entriesById: taskEntriesById,
-                gardenStore: gardenStore,
-                repository: repository,
-                profileStore: profileStore,
-                scanPrefs: scanPrefs,
-                taskIconFor: taskIconFor,
-                dimmed: true,
-                onOpenDetail: onOpenDetail,
-                onGoToPlantScan: onGoToPlantScan,
-                onMarkedPlanted: onMarkedPlanted,
-              ),
-            ],
-            const SizedBox(height: 14),
-            _AddPlantGridCard(onTap: onAddPlant),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MoestuinHeader extends StatelessWidget {
-  const _MoestuinHeader({
-    required this.monthName,
-    required this.plantCount,
-    required this.pendingCount,
-    required this.isEmpty,
-  });
-
-  final String monthName;
-  final int plantCount;
-  final int pendingCount;
-  final bool isEmpty;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final cs = t.colorScheme;
-    final plantsLabel = plantCount == 1 ? '1 plant' : '$plantCount planten';
-    final status = isEmpty
-        ? 'Voeg je eerste groente toe'
-        : pendingCount > 0
-            ? (pendingCount == 1
-                ? '1 actie open'
-                : '$pendingCount acties open')
-            : 'Alles bij voor $monthName';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            cs.primaryContainer.withValues(alpha: 0.55),
-            cs.tertiaryContainer.withValues(alpha: 0.35),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: cs.surface.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.yard_outlined,
-              color: cs.primary,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  monthName,
-                  style: tuinAccentDisplayStyle(
-                    context,
-                    fontSize: 22,
-                    color: cs.onSurface,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (gardenStore.isEmpty)
+                _EmptyGardenCard(onAdd: onAddPlant)
+              else ...[
+                if (parts.pending.isNotEmpty) ...[
+                  const _MoestuinSectionHeader(
+                    title: 'Nu aan de slag',
+                    icon: Icons.bolt_outlined,
+                    emphasized: true,
                   ),
-                ),
-                Text(
-                  status,
-                  style: t.textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                    height: 1.25,
+                  const SizedBox(height: 10),
+                  _PlantGrid(
+                    plants: parts.pending,
+                    month: month,
+                    actionsById: actionsById,
+                    entriesById: taskEntriesById,
+                    gardenStore: gardenStore,
+                    repository: repository,
+                    profileStore: profileStore,
+                    scanPrefs: scanPrefs,
+                    taskIconFor: taskIconFor,
+                    dimmed: false,
+                    onOpenDetail: onOpenDetail,
+                    onGoToPlantScan: onGoToPlantScan,
+                    onMarkedPlanted: onMarkedPlanted,
                   ),
-                ),
+                ],
+                if (parts.done.isNotEmpty) ...[
+                  if (parts.pending.isNotEmpty) const SizedBox(height: 20),
+                  _MoestuinSectionHeader(
+                    title: 'Even rust',
+                    subtitle: parts.done.length == 1
+                        ? '1 plant, geen taak nu'
+                        : '${parts.done.length} planten, geen taak nu',
+                    icon: Icons.check_circle_outline,
+                    emphasized: false,
+                  ),
+                  const SizedBox(height: 10),
+                  _PlantGrid(
+                    plants: parts.done,
+                    month: month,
+                    actionsById: actionsById,
+                    entriesById: taskEntriesById,
+                    gardenStore: gardenStore,
+                    repository: repository,
+                    profileStore: profileStore,
+                    scanPrefs: scanPrefs,
+                    taskIconFor: taskIconFor,
+                    dimmed: true,
+                    onOpenDetail: onOpenDetail,
+                    onGoToPlantScan: onGoToPlantScan,
+                    onMarkedPlanted: onMarkedPlanted,
+                  ),
+                ],
+                const SizedBox(height: 14),
+                _AddPlantGridCard(onTap: onAddPlant),
               ],
-            ),
+            ],
           ),
-          if (!isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: cs.surface.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                plantsLabel,
-                style: t.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -332,13 +256,13 @@ class _MoestuinSectionCard extends StatelessWidget {
 class _MoestuinSectionHeader extends StatelessWidget {
   const _MoestuinSectionHeader({
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.icon,
     required this.emphasized,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final IconData icon;
   final bool emphasized;
 
@@ -347,32 +271,33 @@ class _MoestuinSectionHeader extends StatelessWidget {
     final t = Theme.of(context);
     final cs = t.colorScheme;
     final iconColor = emphasized ? cs.primary : cs.onSurfaceVariant;
+    final titleStyle = tuinDisplayStyle(
+      context,
+      base: t.textTheme.titleSmall,
+      fontSize: 17,
+      color: emphasized ? cs.onSurface : cs.onSurfaceVariant,
+    );
+    final subtitleText = subtitle;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: iconColor),
         const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: tuinDisplayStyle(
-                  context,
-                  base: t.textTheme.titleSmall,
-                  fontSize: 17,
-                  color: emphasized ? cs.onSurface : cs.onSurfaceVariant,
+          child: subtitleText == null
+              ? Text(title, style: titleStyle)
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: titleStyle),
+                    Text(
+                      subtitleText,
+                      style: t.textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                subtitle,
-                style: t.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -396,7 +321,7 @@ class _EmptyGardenCard extends StatelessWidget {
         children: [
           Text(
             'Kies groenten die je kweekt. Je ziet hier wat er '
-            'deze maand te doen is — scannen, planten en oogsten.',
+            'deze maand te doen is, scannen, planten en oogsten.',
             style: t.textTheme.bodyMedium?.copyWith(
               color: cs.onSurfaceVariant,
               height: 1.45,
@@ -441,7 +366,7 @@ class _PlantGrid extends StatelessWidget {
   final GardenScanPrefsStore scanPrefs;
   final IconData Function(GardenTaskType) taskIconFor;
   final bool dimmed;
-  final void Function(Vegetable veg, {bool openWarningsTab}) onOpenDetail;
+  final void Function(Vegetable veg, {bool openScanHistoryTab}) onOpenDetail;
   final void Function({String? vegetableId, bool harvestProbe})? onGoToPlantScan;
   final VoidCallback? onMarkedPlanted;
 
@@ -484,8 +409,8 @@ class _PlantGrid extends StatelessWidget {
           ),
           dimmed: dimmed,
           countdownLine: countdown,
-          onOpenDetail: ({bool openWarningsTab = false}) =>
-              onOpenDetail(veg, openWarningsTab: openWarningsTab),
+          onOpenDetail: ({bool openScanHistoryTab = false}) =>
+              onOpenDetail(veg, openScanHistoryTab: openScanHistoryTab),
           onScan: onGoToPlantScan != null
               ? () => onGoToPlantScan!(vegetableId: veg.id)
               : null,
@@ -579,7 +504,7 @@ class _MoestuinPlantCard extends StatelessWidget {
   final IconData plantActionIcon;
   final bool dimmed;
   final String? countdownLine;
-  final void Function({bool openWarningsTab}) onOpenDetail;
+  final void Function({bool openScanHistoryTab}) onOpenDetail;
   final VoidCallback? onScan;
   final VoidCallback? onMarkPlanted;
   final VoidCallback? onOpenPlantHistory;
@@ -634,7 +559,7 @@ class _MoestuinPlantCard extends StatelessWidget {
         warningLevel != PlantWarningHighlightLevel.none;
 
     final subtitle = dimmed
-        ? (countdownLine ?? 'Geen actie nu nodig')
+        ? (countdownLine ?? 'Geen taak nu nodig')
         : (action?.subtitle ??
             timing?.countdownLabel ??
             (taskActive
@@ -763,21 +688,10 @@ class _MoestuinPlantCard extends StatelessWidget {
                   ),
                   _RoundActionButton(
                     icon: Icons.info_outline,
-                    tooltip: infoWarningHighlight
-                        ? 'Meldingen bekijken'
-                        : 'Teeltinfo',
-                    highlighted: infoWarningHighlight ||
-                        (taskActive && !infoWarningHighlight),
-                    accentBackground: infoWarningHighlight
-                        ? warningAccent?.background
-                        : null,
-                    accentForeground: infoWarningHighlight
-                        ? warningAccent?.foreground
-                        : null,
+                    tooltip: 'Teeltinfo',
+                    highlighted: taskActive,
                     enabled: true,
-                    onPressed: () => onOpenDetail(
-                      openWarningsTab: infoWarningHighlight,
-                    ),
+                    onPressed: () => onOpenDetail(),
                   ),
                 ],
               ),

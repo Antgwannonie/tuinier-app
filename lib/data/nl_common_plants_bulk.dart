@@ -21,7 +21,6 @@ const Map<String, String> kNlCommonPlantEmojis = {
   'tuinerwt': '🫛',
   'sojaboon': '🫛',
   'aardpeer': '🥔',
-  'topinambur': '🥔',
   'zoete_aardappel': '🍠',
   'rammenas': '🥕',
   'zwarte_radijs': '🌱',
@@ -49,7 +48,6 @@ const Map<String, String> kNlCommonPlantEmojis = {
   'kardoen': '🌿',
   'rode_ui': '🧅',
   'winterui': '🧅',
-  'lente_ui': '🧅',
   'tuinmelde': '🍃',
   'zuring': '🍃',
   'waterkers': '🥬',
@@ -77,8 +75,6 @@ const Map<String, String> kNlCommonPlantEmojis = {
   'citroenboom': '🍋',
   'limoen': '🍋',
   'granaatappel': '🍎',
-  'kruisbess': '🫐',
-  'aalbes': '🫐',
   'jostabes': '🫐',
   'vlierbes': '🫐',
   'duindoorn': '🫐',
@@ -105,7 +101,6 @@ const Map<String, String> kNlCommonPlantEmojis = {
   'snijboon_geel': '🫛',
   'winterpostelein': '🥬',
   'bleekselderij_blad': '🥬',
-  'raapsteeltjes': '🥬',
   'scheve_ui': '🧅',
   'knoflook_hardnekkig': '🧄',
   'bloemkool_paars': '🥦',
@@ -117,9 +112,6 @@ const Map<String, String> kNlCommonPlantEmojis = {
   'pompoen_hokkaido': '🎃',
   'pompoen_butternut': '🎃',
   'aardbei_everbearer': '🍓',
-  'framboos_zomer': '🫐',
-  'braam_zonder_doorn': '🫐',
-  'rode_bes_grootvrucht': '🫐',
   'blauwe_regen_bes': '🫐',
 };
 
@@ -128,7 +120,6 @@ savooiekool|Savooiekool|Koolgewas|Middelmatige groeiers|Oktober–maart
 spitskool|Spitskool|Koolgewas|Middelmatige groeiers|Oktober–december
 palmekool|Boerenkool (palm)|Koolgewas|Middelmatige groeiers|Oktober–maart
 romanesco|Romanesco|Koolgewas|Middelmatige groeiers|September–november
-chinese_kool|Chinese kool|Koolgewas|Middelmatige groeiers|September–november
 raapstelen|Raapstelen|Koolgewas|Snelle groeiers|Mei–oktober
 meiraap|Meiraap|Koolgewas|Middelmatige groeiers|Oktober–maart
 schorseneer|Schorseneer|Composietenfamilie|Middelmatige groeiers|Oktober–maart
@@ -139,7 +130,6 @@ bruine_boon|Bruine tuinboon|Peulgewas|Middelmatige groeiers|Augustus–september
 tuinerwt|Tuinerwt|Peulgewas|Snelle groeiers|Juni–augustus
 sojaboon|Sojaboon (edamame)|Peulgewas|Lang producerende zomerplanten|Augustus–september
 aardpeer|Aardpeer|Composietenfamilie|Meerjarig|Oktober–maart
-topinambur|Topinambur|Composietenfamilie|Meerjarig|Oktober–maart
 zoete_aardappel|Zoete aardappel|Windasfamilie|Lang producerende zomerplanten|September–oktober
 rammenas|Rammenas (daikon)|Koolgewas|Snelle groeiers|September–november
 zwarte_radijs|Zwarte radijs|Koolgewas|Snelle groeiers|Juli–oktober
@@ -167,7 +157,6 @@ witte_asperge|Witte asperge|Leliegewassen|Meerjarig|April–juni
 kardoen|Kardoen|Composietenfamilie|Middelmatige groeiers|Oktober–november
 rode_ui|Rode ui|Uiengewassen|Middelmatige groeiers|Juli–september
 winterui|Winterui|Uiengewassen|Middelmatige groeiers|Juli–september
-lente_ui|Lente-ui|Uiengewassen|Snelle groeiers|Mei–juli
 tuinmelde|Tuinmelde|Amarantenfamilie|Snelle groeiers|Mei–oktober
 zuring|Zuring|Polygonaceae|Meerjarig|Maart–november
 waterkers|Waterkers|Brassicaceae|Snelle groeiers|Mei–oktober
@@ -195,8 +184,6 @@ mandarijn|Mandarijn (pot)|Citrusfamilie|Meerjarig fruit (boom)|November–januar
 citroenboom|Citroen (pot)|Citrusfamilie|Meerjarig fruit (boom)|Doorlopend
 limoen|Limoen (pot)|Citrusfamilie|Meerjarig fruit (boom)|Doorlopend
 granaatappel|Granaatappel (pot)|Lythraceae|Meerjarig fruit (boom)|Oktober
-kruisbess|Kruisbess|Saxifragefamilie|Meerjarig fruit (bes)|Juli
-aalbes|Aalbes|Saxifragefamilie|Meerjarig fruit (bes)|Juli
 jostabes|Jostabes|Saxifragefamilie|Meerjarig fruit (bes)|Juli
 vlierbes|Vlierbes|Vlierfamilie|Meerjarig fruit (bes)|Augustus
 duindoorn|Duindoorn|Duindoornfamilie|Meerjarig fruit (bes)|September
@@ -223,7 +210,6 @@ erwtensoep_erwt|Droog erwt (soep)|Peulgewas|Middelmatige groeiers|Juli–augustu
 snijboon_geel|Gele sperzieboon|Peulgewas|Snelle groeiers|Juli–september
 winterpostelein|Winterpostelein|Portulacaceae|Snelle groeiers|Maart–november
 bleekselderij_blad|Bleekselderij blad|Schermbloemenfamilie|Middelmatige groeiers|Juli–oktober
-raapsteeltjes|Raapsteeltjes|Koolgewas|Snelle groeiers|Mei–oktober
 scheve_ui|Gele ui (scheve)|Uiengewassen|Middelmatige groeiers|Juli–september
 knoflook_hardnekkig|Hardnekkige knoflook|Uiengewassen|Middelmatige groeiers|Juli
 bloemkool_paars|Paarse bloemkool|Koolgewas|Middelmatige groeiers|September–november
@@ -235,9 +221,6 @@ maiskolf|Maïskolf|Grasfamilie|Lang producerende zomerplanten|September
 pompoen_hokkaido|Hokkaido-pompoen|Komkommerfamilie|Lang producerende zomerplanten|September–oktober
 pompoen_butternut|Butternutpompoen|Komkommerfamilie|Lang producerende zomerplanten|September–oktober
 aardbei_everbearer|Everbearing aardbei|Rozenbloemenfamilie|Meerjarig fruit (bes)|Mei–oktober
-framboos_zomer|Zomerframboos|Rozenbloemenfamilie|Meerjarig fruit (bes)|Juli–augustus
-braam_zonder_doorn|Doornloze braam|Rozenbloemenfamilie|Meerjarig fruit (bes)|Augustus
-rode_bes_grootvrucht|Grootvrucht rode bes|Heidefamilie|Meerjarig fruit (bes)|Juli
 blauwe_regen_bes|Blauwe regen (sier)|Fabaceae|Meerjarig|Juni–juli
 ''';
 

@@ -4,12 +4,14 @@ import 'package:http/http.dart' as http;
 
 import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
+import 'crop_care_checklist.dart';
 import 'plant_ai_insight_mapper.dart';
 import 'plant_ai_insight_prompt.dart';
 import 'plant_scan_consistency.dart';
 import 'planting_timing_advice.dart';
 import 'crop_harvest_kind.dart';
 import 'underground_crop.dart';
+import 'visible_fruit_crop.dart';
 
 class PlantPhotoAiException implements Exception {
   PlantPhotoAiException(this.message);
@@ -88,6 +90,7 @@ class PlantPhotoAiService {
             : 'Zaaidatum valt binnen het kalenderseizoen of er is geen conflict.';
 
     final underground = isUndergroundCrop(vegetable);
+    final visibleFruit = isVisibleFruitCrop(vegetable);
     final ornamentalOnly = isOrnamentalOnlyMoestuinCrop(vegetable);
     final edibleBloom = isEdibleMoestuinBloomCrop(vegetable);
     final ornamentalSection = ornamentalOnly
@@ -97,10 +100,12 @@ MOESTUINBLOEM / RANDPLANT (${vegetable.nameNl}):
 Dit is GEEN eetbaar groente-oogstgewas. Praat NIET over oogsten als maaltijd of «geoogst».
 - harvestReady in insight: ALTIJD false.
 - phase: bij bloei "flowering"; NIET "ripe" (tenzij volledig uitgebloeid en seizoen klaar).
-- daysUntilHarvest: null.
-- harvestWindowLabel: bloei-periode in NL (bv. "in bloei tot eerste vorst"), geen "oogst over X dagen".
+- daysUntilHarvest: null (niet gebruiken voor bloemen).
+- daysUntilBloom: VERPLICHT als plant nog niet duidelijk in bloei; schat dagen tot eerste bloei op basis van knoppen, plantgrootte, fase op foto, dagen sinds zaaien en kalender. null als al in bloei (phase flowering).
+- harvestWindowLabel: alleen als fallback als dagen niet te schatten (bv. "bloei in de zomer"); geef liever daysUntilBloom.
 - bloomSeasonNote VERPLICHT bij zichtbare bloei (2-3 zinnen NL): hoe de bloei eruitziet, nut voor bijen/insecten, eventueel uitgebloeide bloemen wegknippen.
-- insight.summary, advice, ripenessNote: focus op bloei, standplaats, water — niet op oogsten.
+- insight.summary, advice, ripenessNote: focus op bloei, standplaats, water, niet op oogsten.
+- harvestChancePercent in insight: kans (0-100) dat bloei nog goed slaagt dit seizoen op basis van foto.
 - coachTasks: geen kind "harvest".
 '''
         : '';
@@ -108,12 +113,13 @@ Dit is GEEN eetbaar groente-oogstgewas. Praat NIET over oogsten als maaltijd of 
         ? '''
 
 EETBARE MOESTUINBLOEM / KRUID (${vegetable.nameNl}):
-De tuinier kan bloemen of blad ETEN én de plant laten bloeien voor insecten — beide zijn oké.
+De tuinier kan bloemen of blad ETEN én de plant laten bloeien voor insecten, beide zijn oké.
 - Vermeld in bloomSeasonNote of ripenessNote dat eetbare delen geplukt kunnen worden (bloemen, blad).
 - harvestReady in insight: true alleen als bloemen/blad op de foto duidelijk geschikt lijken om te eten/plukken.
 - Zet ook in de tekst dat «Seizoen afronden» mogelijk is zonder te eten (uitbloeien voor bijen).
 - phase bij bloei: "flowering"; niet "ripe" tenzij duidelijk uitgebloeid en klaar om op te ruimen.
 - daysUntilHarvest: null (geen groente-oogst-countdown).
+- daysUntilBloom: VERPLICHT als nog niet in bloei; schat dagen tot bloei. null als al in bloei.
 - harvestWindowLabel: bloei + eventueel «geschikt om te plukken» in NL.
 - bloomSeasonNote VERPLICHT bij bloei (2-4 zinnen): bloei, insecten, én of het eetbaar lijkt.
 - coachTasks: mag "harvest" alleen als eetbaar plukken; anders water/snoeien/check.
@@ -124,7 +130,7 @@ De tuinier kan bloemen of blad ETEN én de plant laten bloeien voor insecten —
 
 PROEFOOGST-FOTO (ondergronds gewas):
 De gebruiker trok één ${vegetable.nameNl} uit de grond om te controleren of de oogst rijp is.
-- Beoordeel het ZICHTBARE deel (wortel, knol, bol) op de foto — niet alleen blad.
+- Beoordeel het ZICHTBARE deel (wortel, knol, bol) op de foto, niet alleen blad.
 - harvestReady in insight: true alleen als het geoogste deel duidelijk oogstrijp lijkt.
 - phase "ripe" alleen bij duidelijke rijpheid; anders almost_ripe of growing met uitleg.
 - undergroundHarvestNote: kort NL advies (bijv. nog even laten of nu oogsten).
@@ -134,17 +140,38 @@ De gebruiker trok één ${vegetable.nameNl} uit de grond om te controleren of de
             ? '''
 
 ONDERGRONDS GEWAS (${vegetable.nameNl}):
-De oogst zit onder de grond. Op een gewone plantfoto zie je die NIET — beoordeel alleen blad en groei boven de grond.
-- Zet harvestReady in insight NOOIT op true alleen op basis van bladgroei.
-- phase maximaal "almost_ripe" (niet "ripe") tenzij de foto een uitgetrokken wortel/knol toont.
-- daysUntilHarvest: ruime schatting op basis van groei + kalender; liever iets later.
-- undergroundHarvestNote VERPLICHT (2-4 zinnen NL): leg uit dat oogst misschien kan op basis van de plantgroei, maar dat de tuinier eerst één plant moet uitproberen. Daarna kan een foto van die uitgetrokken proefplant de AI helpen bevestigen of oogsten kan.
-- ripenessNote in insight: zelfde boodschap in 1 zin.
+De oogst zit onder de grond. Op een gewone plantfoto zie je die NIET.
+- Beoordeel ALLEEN het bovengrondse deel (blad, loof, stengel) en combineer dat met dagen sinds zaai/plantdatum (${daysSince ?? 'onbekend'} dagen) en het kalender-oogstvenster ($calHarvest).
+- Zet harvestReady in insight NOOIT op true op een gewone plantfoto, alleen bij proefoogst-foto met zichtbare wortel/knol.
+- phase maximaal "almost_ripe" (niet "ripe") op plantfoto.
+- daysUntilHarvest: schatting op basis van teelttijd (${vegetable.cropDuration ?? 'onbekend'}) + groei bovengronds + kalender; liever iets later.
+- undergroundHarvestNote VERPLICHT (3-5 zinnen NL) wanneer oogst op basis van loof + tijd WAARSCHIJNLIJK kan:
+  * Begin ALTIJD met dat je dit niet zeker kunt inschatten zonder de knol/wortel te zien.
+  * Vermeld wat je op de foto ziet (bladgrootte, kleur loof) en hoe dat past bij de tijd sinds zaaien.
+  * Adviseer de tuinier één plant uit de grond te trekken om zelf te controleren of het rijp is.
+  * Als het nog te vroeg lijkt: zeg dat duidelijk, de tuinier moet blijven scannen.
+- ripenessNote in insight: korte zin met dezelfde boodschap (onzekerheid + zelf controleren).
+- moreHarvestExpectedThisSeason: false (één oogstmoment per seizoen bij dit gewas).
 '''
             : '';
 
+    final visibleFruitSection = visibleFruit && !underground && !ornamentalOnly
+        ? buildVisibleFruitHarvestPromptSection(vegetable)
+        : '';
+
+    final harvestConservatismNote = ornamentalOnly
+        ? ''
+        : edibleBloom
+            ? 'Bij eetbare moestuinbloem: leg beide keuzes uit (plukken om te eten vs laten uitbloeien).'
+            : visibleFruit
+                ? 'Bij zichtbare vruchten: beoordeel grootte t.o.v. supermarkt en rijpheid op de foto. '
+                    'harvestReady=true als duidelijk eetrijp supermarktformaat; niet te terughoudend bij rijpe vruchten. '
+                    'Bij jonge kleine vruchten: harvestReady=false en schat daysUntilHarvest.'
+                : 'Wees conservatief bij oogst: liever iets later dan te vroeg. '
+                    'Als de plant rijp lijkt, zet phase op "ripe" en daysUntilHarvest op 0.';
+
     final prompt = '''
-Je bent een ervaren Nederlandse moestuin-expert. De gebruiker scant onder "${vegetable.nameNl}" in de app — jij moet eerst controleren of de foto WÉL die plant toont.
+Je bent een ervaren Nederlandse moestuin-expert. De gebruiker scant onder "${vegetable.nameNl}" in de app, jij moet eerst controleren of de foto WÉL die plant toont.
 
 Gewas in app (verwacht): ${vegetable.nameNl} (${vegetable.nameLatin ?? '—'})
 Plantfamilie verwacht: ${vegetable.family}
@@ -160,9 +187,9 @@ Algemene teeltinfo oogst: ${vegetable.harvest}
 Teelttijd: ${vegetable.cropDuration ?? 'niet opgegeven'}
 $previousSection
 ${firstScan ? '''
-EERSTE SCAN — ZAADBED / GROND (belangrijk):
+EERSTE SCAN: ZAADBED / GROND (belangrijk):
 De gebruiker start de plantgeschiedenis. De foto mag ALLEEN grond, potgrond, zaadbed,
-mulch of een lege plantplek tonen — nog géén kiemplant zichtbaar is normaal en gewenst.
+mulch of een lege plantplek tonen, nog géén kiemplant zichtbaar is normaal en gewenst.
 - Als je vooral aarde/grond/ritsen/mulch ziet zonder duidelijke plant: matchesSelectedCrop = true
   (het is hun ${vegetable.nameNl}-plek in de tuin, niet "verkeerd gewas").
 - detectedPlantLabel: kort NL, bv. "zaadbed / grond" of "plantplek zonder kiemplant".
@@ -177,7 +204,7 @@ mulch of een lege plantplek tonen — nog géén kiemplant zichtbaar is normaal 
 Als wél al een kiemplant of jonge ${vegetable.nameNl} zichtbaar is: volg de normale stappen hieronder.
 
 ''' : ''}
-STAP 1 — IDENTITEIT (ALTIJD EERST, vóór groeifase):
+STAP 1: IDENTITEIT (ALTIJD EERST, vóór groeifase):
 Vergelijk de foto met een echte ${vegetable.nameNl}. Kijk naar:
 - bladvorm en bladrand (getand, glad, diep ingesneden?)
 - samengesteld vs enkel blad (tomaat = samengesteld; peper = enkel blad)
@@ -189,7 +216,7 @@ matchesSelectedCrop: true ALLEEN als de plant overduidelijk ${vegetable.nameNl} 
 false bij een ANDER gewas (bv. cayennepeper i.p.v. tomaat, komkommer, basilicum, onkruid).
 Bij twijfel tussen twee soorten: matchesSelectedCrop = false.
 detectedPlantLabel: korte NL naam van wat je écht ziet (bv. "cayennepeper", "tomaat", "onbekende plant").
-cropMismatchWarning: bij false VERPLICHT — duidelijke zin, bv. "Dit lijkt geen tomaat maar een cayennepeper. Kies cayennepeper bij het scannen."
+cropMismatchWarning: bij false VERPLICHT: duidelijke zin, bv. "Dit lijkt geen tomaat maar een cayennepeper. Kies cayennepeper bij het scannen."
 
 Als matchesSelectedCrop = false:
 - GEEN groei-/oogstadvies alsof het ${vegetable.nameNl} is
@@ -198,8 +225,8 @@ Als matchesSelectedCrop = false:
 - harvestStillPossibleThisSeason, daysUntilHarvest: null
 - zet cropMismatchWarning ook in warnings-array
 
-STAP 2 — alleen als matchesSelectedCrop = true: groeifase en oogst.
-VERPLICHT — vergelijk zaaidatum met foto (tenzij zaaidatum ONBEKEND):
+STAP 2: alleen als matchesSelectedCrop = true: groeifase en oogst.
+VERPLICHT: vergelijk zaaidatum met foto (tenzij zaaidatum ONBEKEND):
 1. Welke fase/grootte zie je op de foto?
 2. Wat verwacht je na ${weeksSinceStated ?? '?'} weken voor ${vegetable.nameNl} (teelttijd)?
 3. plantedDateMatchesPhoto: true als foto binnen ~2 weken past bij de datum, false als plant duidelijk ouder of jonger lijkt, null bij onbekende datum.
@@ -216,11 +243,12 @@ Geef ALLEEN geldige JSON (geen markdown) met exact deze velden:
   "comparisonNote": "1 zin: waarom wel/niet dezelfde fase als vorige scan",
   "phase": "seedling|growing|flowering|fruiting|almost_ripe|ripe",
   "phaseLabel": "korte Nederlandse faseomschrijving",
-  "daysUntilHarvest": <int of null als al rijp>,
+  "daysUntilHarvest": <int of null als al rijp; null bij moestuinbloemen>,
+  "daysUntilBloom": <int of null; moestuinbloemen: dagen tot bloei; null als al in bloei>,
   "harvestWindowLabel": "bijv. over 2 weken of half augustus",
   "confidencePercent": <int 50-95>,
   "advice": "1-3 zinnen praktisch advies in het Nederlands",
-  "warnings": ["alleen ziektes/plagen/urgent — geen seizoens- of datum-meldingen hier"],
+  "warnings": ["alleen ziektes/plagen/urgent, geen seizoens- of datum-meldingen hier"],
   "harvestStillPossibleThisSeason": <true|false|null>,
   "seasonTimingWarning": <korte NL zin of null>,
   "estimatedWeeksGrowing": <int of null>,
@@ -236,19 +264,36 @@ Geef ALLEEN geldige JSON (geen markdown) met exact deze velden:
   "healthTrend": <"improved"|"stable"|"worse"|"unknown">,
   "photoShowsPlantingBedOnly": <true als alleen grond/zaadbed zonder zichtbare plant; anders false>,
   "undergroundHarvestNote": <NL of null; verplicht bij ondergronds gewas op plantfoto>,
+  "fruitHarvestNote": <NL of null; verplicht bij zichtbare vruchten op plantfoto: maat, supermarktvergelijking, oogstadvies>,
   "bloomSeasonNote": <NL of null; verplicht bij moestuinbloem in bloei>,
 $kPlantAiInsightJsonSchema
 }
 $undergroundSection
+$visibleFruitSection
 $ornamentalSection
 $edibleBloomSection
 
+${buildCropCareChecklistPrompt(
+  vegetable: vegetable,
+  daysSincePlanted: daysSince,
+  phaseLabel: previousAnalysis?.phaseLabel,
+  previousPhase: previousAnalysis?.phase,
+  isFirstScan: firstScan,
+)}
+
 ${kPlantAiInsightInstructions.replaceAll('{gewas}', vegetable.nameNl)}
 
-${ornamentalOnly ? 'Bij sier-moestuinbloem: geen "ripe", geen harvestReady, geen oogst-taal.' : edibleBloom ? 'Bij eetbare moestuinbloem: leg beide keuzes uit (plukken om te eten vs laten uitbloeien).' : 'Wees conservatief bij oogst: liever iets later dan te vroeg. Als de plant rijp lijkt, zet phase op "ripe" en daysUntilHarvest op 0.'}
+BELANGRIJK voor insight: scanAssessments FASEBEWUST (alleen items van jouw vastgestelde fase). growthPhaseDetail verplicht. harvestChancePercent + harvestChanceNote verplicht. kind=positive voor wat goed gaat; task voor acties; let_op voor fase-passende risico's die niet op foto staan.
+
+$harvestConservatismNote
 ${underground ? 'Bij ondergronds gewas: "ripe" en harvestReady alleen bij proefoogst-foto met zichtbare wortel/knol.' : ''}
 Bij matchesPreviousScan true: wijzig phase, harvestWindowLabel en advies niet ten opzichte van de vorige scan (alleen daysUntilHarvest verlagen met verstreken dagen).
 Als de plant groot is maar de kalender zegt "te laat", kan harvestStillPossibleThisSeason alsnog true zijn.
+Het officiële seizoen mag voorbij zijn, zet dan seasonHarvestComplete NIET op true zolang er nog oogst mogelijk lijkt.
+Vul moreHarvestExpectedThisSeason en seasonHarvestComplete in insight in (zie schema).
+Bij moreHarvestExpectedThisSeason=true: harvestAlternativeTips met praktische tips voor vervolgoogst.
+Bij geen natuurlijke oogst meer: harvestAlternativeTips met alternatieven.
+Bij vermoeden van dode plant: plantLikelyDead=true en deadPlantCheckSteps met concrete controles.
 Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander gewas passen.
 ''';
 
@@ -298,10 +343,13 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
             aiMatchesPrevious: json['matchesPreviousScan'] as bool?,
           );
           return _applyOrnamentalScanRules(
-            _applyUndergroundScanRules(
-              reconciled,
+            _applyVisibleFruitScanRules(
+              _applyUndergroundScanRules(
+                reconciled,
+                vegetable: vegetable,
+                isHarvestProbePhoto: isHarvestProbePhoto,
+              ),
               vegetable: vegetable,
-              isHarvestProbePhoto: isHarvestProbePhoto,
             ),
             vegetable: vegetable,
           );
@@ -371,8 +419,58 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
     if (!isHarvestProbePhoto && result.phase == PlantAiPhase.ripe) {
       result = result.copyWith(
         phase: PlantAiPhase.almostRipe,
-        phaseLabel: 'Mogelijk oogstbaar — controleer ondergronds',
+        phaseLabel: 'Mogelijk oogstbaar, controleer ondergronds',
       );
+    }
+    if (!isHarvestProbePhoto) {
+      final note = result.undergroundHarvestNote?.trim();
+      final needsNote = note == null || note.isEmpty;
+      final signal = result.phase == PlantAiPhase.almostRipe ||
+          result.phase == PlantAiPhase.fruiting ||
+          (result.daysUntilHarvest != null && result.daysUntilHarvest! <= 21);
+      if (needsNote && signal) {
+        result = result.copyWith(
+          undergroundHarvestNote:
+              'Ik kan niet zeker inschatten of ${vegetable.nameNl} rijp is, '
+              'alleen het loof is zichtbaar. Op basis van groei en tijd sinds '
+              'zaaien lijkt oogst mogelijk. Trek één plant uit de grond om '
+              'zelf te controleren of het rijp is.',
+        );
+      }
+    }
+    return result;
+  }
+
+  PlantAiAnalysis _applyVisibleFruitScanRules(
+    PlantAiAnalysis analysis, {
+    required Vegetable vegetable,
+  }) {
+    if (!isVisibleFruitCrop(vegetable)) return analysis;
+    var result = analysis;
+    final note = result.fruitHarvestNote?.trim();
+    final ripeness = result.insight?.ripenessNote?.trim();
+    if ((note == null || note.isEmpty) &&
+        ripeness != null &&
+        ripeness.isNotEmpty) {
+      result = result.copyWith(fruitHarvestNote: ripeness);
+    }
+    final insight = result.insight;
+    if (insight != null &&
+        insight.harvestReady == true &&
+        result.phase == PlantAiPhase.fruiting) {
+      result = result.copyWith(
+        phase: PlantAiPhase.ripe,
+        phaseLabel: result.phaseLabel.toLowerCase().contains('rijp')
+            ? result.phaseLabel
+            : 'Rijp voor oogst',
+        daysUntilHarvest: 0,
+      );
+    }
+    if (insight != null &&
+        insight.harvestReady == true &&
+        result.daysUntilHarvest != null &&
+        result.daysUntilHarvest! > 0) {
+      result = result.copyWith(daysUntilHarvest: 0);
     }
     return result;
   }
@@ -392,12 +490,18 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
             ? result.phaseLabel
             : 'Prachtig in bloei',
         daysUntilHarvest: null,
+        daysUntilBloom: 0,
+      );
+    } else if (result.phase == PlantAiPhase.flowering) {
+      result = result.copyWith(
+        daysUntilHarvest: null,
+        daysUntilBloom: 0,
       );
     }
     final hw = result.harvestWindowLabel.toLowerCase();
     if (hw.contains('oogst') && !hw.contains('bloei')) {
       result = result.copyWith(
-        harvestWindowLabel: 'In bloei — goed voor bijen en nuttige insecten',
+        harvestWindowLabel: 'In bloei, goed voor bijen en nuttige insecten',
       );
     }
     final insight = result.insight;
@@ -473,6 +577,7 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
       }
     }
     final days = json['daysUntilHarvest'];
+    final bloomDays = json['daysUntilBloom'];
     final matchesPrevious = json['matchesPreviousScan'] as bool? ?? false;
     final harvestPossible = json['harvestStillPossibleThisSeason'];
     final warnings = (json['warnings'] as List<dynamic>?)
@@ -481,6 +586,7 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
         const [];
     final undergroundNote =
         (json['undergroundHarvestNote'] as String?)?.trim();
+    final fruitNote = (json['fruitHarvestNote'] as String?)?.trim();
     final bloomNote = (json['bloomSeasonNote'] as String?)?.trim();
     return _enrichFromJson(
       PlantAiAnalysis(
@@ -488,6 +594,7 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
         phase: phase,
         phaseLabel: phaseLabel,
         daysUntilHarvest: days is num ? days.toInt() : null,
+        daysUntilBloom: bloomDays is num ? bloomDays.toInt() : null,
         harvestWindowLabel:
             json['harvestWindowLabel'] as String? ?? 'zie advies',
         confidencePercent:
@@ -519,6 +626,8 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
             undergroundNote != null && undergroundNote.isNotEmpty
                 ? undergroundNote
                 : null,
+        fruitHarvestNote:
+            fruitNote != null && fruitNote.isNotEmpty ? fruitNote : null,
         bloomSeasonNote:
             bloomNote != null && bloomNote.isNotEmpty ? bloomNote : null,
       ),
@@ -533,7 +642,7 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
     if (base.hasCropMismatch) return base;
     final raw = parsePlantAiInsight(json);
     if (raw == null) return base;
-    final insight = normalizeInsight(raw);
+    final insight = normalizeInsight(raw, phase: base.phase);
     final mergedWarnings = mergeAnalysisWarnings(
       legacyWarnings: base.warnings,
       insight: insight,
@@ -550,6 +659,7 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
         : base.advice;
     final undergroundNote =
         (json['undergroundHarvestNote'] as String?)?.trim();
+    final fruitNote = (json['fruitHarvestNote'] as String?)?.trim();
     final bloomNote = (json['bloomSeasonNote'] as String?)?.trim();
     return base.copyWith(
       warnings: mergedWarnings,
@@ -561,6 +671,8 @@ Forceer nooit matchesSelectedCrop true als blad/stengel duidelijk bij een ander 
           (undergroundNote != null && undergroundNote.isNotEmpty
               ? undergroundNote
               : null),
+      fruitHarvestNote: base.fruitHarvestNote ??
+          (fruitNote != null && fruitNote.isNotEmpty ? fruitNote : null),
       bloomSeasonNote: base.bloomSeasonNote ??
           (bloomNote != null && bloomNote.isNotEmpty ? bloomNote : null),
     );

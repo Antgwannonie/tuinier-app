@@ -2,6 +2,8 @@ import '../models/vegetable.dart';
 import '../models/vegetable_group.dart';
 import 'vegetables_data.dart';
 
+import 'vegetable_id_migrations.dart';
+
 /// Lokale repository (later te vervangen door API + cache na login).
 class VegetableRepository {
   static const _categoryOrder = <String, int>{
@@ -22,12 +24,25 @@ class VegetableRepository {
   }
 
   List<Vegetable> search(String query) {
-    return all.where((v) => v.matchesQuery(query)).toList();
+    return all
+        .where(
+          (v) => vegetableMatchesQuery(
+            query,
+            nameNl: v.nameNl,
+            nameLatin: v.nameLatin,
+            family: v.family,
+            growthCategory: v.growthCategory,
+            keywords: v.keywords,
+            vegetableId: v.id,
+          ),
+        )
+        .toList();
   }
 
   Vegetable? byId(String id) {
+    final normalized = normalizeVegetableId(id);
     for (final v in kVegetablesSeed) {
-      if (v.id == id) return v;
+      if (v.id == normalized) return v;
     }
     return null;
   }

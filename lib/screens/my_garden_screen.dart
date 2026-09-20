@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../data/ai_settings_store.dart';
 import '../data/garden_notifications_sync.dart';
 import '../data/garden_profile_store.dart';
 import '../data/garden_scan_prefs_store.dart';
 import '../data/my_garden_store.dart';
 import '../data/vegetable_repository.dart';
+import '../data/weather_notifications_sync.dart';
+import '../data/weather_prefs_store.dart';
 
 /// Instellingen voor Mijn moestuin (scan, meldingen).
 class MyGardenScreen extends StatelessWidget {
@@ -14,6 +17,8 @@ class MyGardenScreen extends StatelessWidget {
     required this.gardenStore,
     required this.profileStore,
     required this.scanPrefs,
+    required this.weatherPrefs,
+    required this.aiSettings,
     this.onGoToPlantScan,
   });
 
@@ -21,6 +26,8 @@ class MyGardenScreen extends StatelessWidget {
   final MyGardenStore gardenStore;
   final GardenProfileStore profileStore;
   final GardenScanPrefsStore scanPrefs;
+  final WeatherPrefsStore weatherPrefs;
+  final AiSettingsStore aiSettings;
   final void Function({String? vegetableId})? onGoToPlantScan;
 
   @override
@@ -34,6 +41,8 @@ class MyGardenScreen extends StatelessWidget {
         profileStore: profileStore,
         repository: repository,
         scanPrefs: scanPrefs,
+        weatherPrefs: weatherPrefs,
+        aiSettings: aiSettings,
       ),
     );
   }
@@ -45,12 +54,16 @@ class _SettingsBody extends StatefulWidget {
     required this.profileStore,
     required this.repository,
     required this.scanPrefs,
+    required this.weatherPrefs,
+    required this.aiSettings,
   });
 
   final MyGardenStore gardenStore;
   final GardenProfileStore profileStore;
   final VegetableRepository repository;
   final GardenScanPrefsStore scanPrefs;
+  final WeatherPrefsStore weatherPrefs;
+  final AiSettingsStore aiSettings;
 
   @override
   State<_SettingsBody> createState() => _SettingsBodyState();
@@ -61,11 +74,13 @@ class _SettingsBodyState extends State<_SettingsBody> {
   void initState() {
     super.initState();
     widget.scanPrefs.addListener(_onPrefsChanged);
+    widget.weatherPrefs.addListener(_onPrefsChanged);
   }
 
   @override
   void dispose() {
     widget.scanPrefs.removeListener(_onPrefsChanged);
+    widget.weatherPrefs.removeListener(_onPrefsChanged);
     super.dispose();
   }
 
@@ -77,6 +92,16 @@ class _SettingsBodyState extends State<_SettingsBody> {
       gardenStore: widget.gardenStore,
       repository: widget.repository,
       scanPrefs: widget.scanPrefs,
+    );
+  }
+
+  Future<void> _rescheduleWeather() async {
+    await syncWeatherNotifications(
+      weatherPrefs: widget.weatherPrefs,
+      aiSettings: widget.aiSettings,
+      gardenStore: widget.gardenStore,
+      profileStore: widget.profileStore,
+      repository: widget.repository,
     );
   }
 
@@ -169,6 +194,20 @@ class _SettingsBodyState extends State<_SettingsBody> {
           onChanged: (v) async {
             await widget.gardenStore.setNotificationsEnabled(v);
             await _reschedule();
+          },
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Weermeldingen'),
+          subtitle: Text(
+            widget.weatherPrefs.notificationsEnabled
+                ? 'Elke ochtend (~07:30) een AI-samenvatting van het tuinweer'
+                : 'Geen weer-meldingen',
+          ),
+          value: widget.weatherPrefs.notificationsEnabled,
+          onChanged: (v) async {
+            await widget.weatherPrefs.setNotificationsEnabled(v);
+            await _rescheduleWeather();
           },
         ),
         const Divider(height: 32),

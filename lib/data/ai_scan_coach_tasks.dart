@@ -23,9 +23,7 @@ List<GardenNote> buildCoachNotesFromAnalysis({
       if (insight.coachTasks[i].title.trim().isNotEmpty)
         GardenNote(
           id: _coachNoteId(scanDate, i),
-          date: base.add(
-            Duration(days: insight.coachTasks[i].dueInDays.clamp(0, 90)),
-          ),
+          date: base,
           title:
               '${vegetable.nameNl}: ${insight.coachTasks[i].title.trim()}',
           body: [
@@ -51,13 +49,11 @@ List<GardenNote> fallbackCoachNotesFromActions({
   required PlantAiInsightReport insight,
   required Vegetable vegetable,
   required DateTime scanDate,
-  int maxNotes = 3,
 }) {
   if (insight.coachTasks.isNotEmpty) return const [];
   final base = DateTime(scanDate.year, scanDate.month, scanDate.day);
   final actions = insight.recommendedActions
       .where((a) => a.title.trim().isNotEmpty)
-      .take(maxNotes)
       .toList();
   if (actions.isEmpty) return const [];
 

@@ -18,7 +18,7 @@ bool isMoestuinBloomCrop(Vegetable vegetable) {
 /// @deprecated Gebruik [isMoestuinBloomCrop] of [isOrnamentalOnlyMoestuinCrop].
 bool isOrnamentalMoestuinCrop(Vegetable vegetable) => isMoestuinBloomCrop(vegetable);
 
-/// Alleen bloei/insecten — niet bedoeld om te eten (cosmos, facelia, …).
+/// Alleen bloei/insecten, niet bedoeld om te eten (cosmos, facelia, …).
 bool isOrnamentalOnlyMoestuinCrop(Vegetable vegetable) =>
     isMoestuinBloomCrop(vegetable) && !isEdibleMoestuinBloomCrop(vegetable);
 
@@ -63,7 +63,7 @@ const Set<String> _kEdibleMoestuinBloomIds = {
   'munt_bloei',
   'salie_bloei',
   'tijm_bloei',
-  'lavendel_bloei',
+  'lavendel',
   'wilde_marjolein',
   'hysop',
 };
@@ -121,7 +121,7 @@ String edibleBloomEatHint(Vegetable vegetable) {
       return info.atAGlance;
     }
     if (kind.contains('kruid') || kind.contains('bloem & blad')) {
-      return '${info.plantKindLabel}: knip wat je nodig hebt — '
+      return '${info.plantKindLabel}: knip wat je nodig hebt, '
           'of laat bloeien voor bijen en nuttige insecten.';
     }
   }
@@ -156,12 +156,12 @@ EdibleBloomHarvestUi? edibleBloomHarvestUiFor(
 }) {
   if (!isEdibleMoestuinBloomCrop(vegetable)) return null;
   return EdibleBloomHarvestUi(
-    sectionTitle: 'In bloei — eetbaar of laten staan',
+    sectionTitle: 'In bloei, eetbaar of laten staan',
     sectionHintFallback:
         'Je $plantNameNl helpt insecten én kun je (deels) eten.',
     edibleChoiceNote:
         'Kies «Geoogst» als je bloemen of blad geplukt hebt en klaar bent. '
-        'Kies «Seizoen afronden» om de plant uit je moestuin te halen zonder te eten — '
+        'Kies «Seizoen afronden» om de plant uit je moestuin te halen zonder te eten, '
         'bijvoorbeeld om verder uit te laten bloeien tot het seizoen voorbij is.',
     foodHarvest: _foodHarvestCopyForEdibleBloom(
       vegetable,
@@ -181,7 +181,7 @@ CropHarvestUiCopy _ornamentalOnlySeasonFinishCopy({
   return CropHarvestUiCopy(
     sectionTitle: bloomConfirmed ? 'Op haar mooist' : 'Prachtig in bloei',
     sectionHintFallback:
-        'Je $plantNameNl doet het goed — laat bloeien voor bijen en nuttige insecten.',
+        'Je $plantNameNl doet het goed, laat bloeien voor bijen en nuttige insecten.',
     buttonLabel: 'Seizoen afronden',
     dialogTitle: 'Seizoen afronden?',
     dialogBody:
@@ -191,10 +191,10 @@ CropHarvestUiCopy _ornamentalOnlySeasonFinishCopy({
     infoBody:
         'Cosmos, facelia en vergelijkbare bloemen eet je niet als maaltijd. '
         'Ze helpen bij bestuiving en nuttige insecten.\n\n'
-        '• Laat ze bloeien zolang het kan — dat is juist het doel.\n'
+        '• Laat ze bloeien zolang het kan, dat is juist het doel.\n'
         '• Knip af en toe uitgebloeide bloemen voor langere bloei.\n'
         '• Gebruik «Seizoen afronden» als de plant eruit gaat of het jaar klaar is.',
-    snackBarDone: '$plantNameNl staat in History — tot volgend seizoen!',
+    snackBarDone: '$plantNameNl staat in History, tot volgend seizoen!',
   );
 }
 
@@ -206,24 +206,24 @@ CropHarvestUiCopy _seasonFinishCopyForEdibleBloom(
   return CropHarvestUiCopy(
     sectionTitle: 'Laten uitbloeien of opruimen',
     sectionHintFallback:
-        'Je hoeft niet te oogsten — je kunt de plant laten staan voor insecten.',
+        'Je hoeft niet te oogsten, je kunt de plant laten staan voor insecten.',
     buttonLabel: 'Seizoen afronden',
     dialogTitle: 'Seizoen afronden zonder te oogsten?',
     dialogBody:
         'Weet je zeker dat je $plantNameNl uit je actieve moestuin wilt halen '
         'zonder dat je alles geoogst hebt om te eten?\n\n'
         'De plant gaat naar History. Je koos ervoor om (verder) uit te laten bloeien, '
-        'op te ruimen, of het seizoen af te ronden — terwijl insecten er nog van profiteren.\n\n'
+        'op te ruimen, of het seizoen af te ronden, terwijl insecten er nog van profiteren.\n\n'
         'Let op: $eat',
     infoTitle: 'Eten of laten bloeien?',
     infoBody:
         'Sommige moestuinbloemen en kruiden kun je én eten én laten staan voor insecten.\n\n'
-        '• «Geoogst» — je hebt bloemen, blad of bloei geplukt om te eten en bent klaar met dit gewas.\n'
-        '• «Seizoen afronden» — je haalt de plant uit je actieve moestuin zonder alles te eten; '
+        '• «Geoogst», je hebt bloemen, blad of bloei geplukt om te eten en bent klaar met dit gewas.\n'
+        '• «Seizoen afronden», je haalt de plant uit je actieve moestuin zonder alles te eten; '
         'bijvoorbeeld omdat je wilt uitbloeien voor bijen of omdat het seizoen klaar is.\n\n'
-        'Je kunt vaak nog even plukken vóór je afrondt — daarna blijft de geschiedenis in de app.',
+        'Je kunt vaak nog even plukken vóór je afrondt, daarna blijft de geschiedenis in de app.',
     snackBarDone:
-        '$plantNameNl staat in History — je liet het uitbloeien of rondde het seizoen af.',
+        '$plantNameNl staat in History, je liet het uitbloeien of rondde het seizoen af.',
   );
 }
 
@@ -234,7 +234,7 @@ CropHarvestUiCopy _foodHarvestCopyForEdibleBloom(
   return CropHarvestUiCopy(
     sectionTitle: 'Klaar om te eten / te plukken',
     sectionHintFallback:
-        'Pluk bloemen of blad voor op je bord — of laat staan met «Seizoen afronden».',
+        'Pluk bloemen of blad voor op je bord, of laat staan met «Seizoen afronden».',
     buttonLabel: 'Geoogst',
     dialogTitle: 'Geoogst om te eten?',
     dialogBody:
@@ -245,10 +245,10 @@ CropHarvestUiCopy _foodHarvestCopyForEdibleBloom(
     infoTitle: 'Eten of laten bloeien?',
     infoBody:
         '${edibleBloomEatHint(vegetable)}\n\n'
-        '• «Geoogst» — je plukte wat eetbaar is en bent klaar met dit gewas in de moestuin.\n'
-        '• «Seizoen afronden» — je eet niet (meer) mee en haalt de plant weg terwijl hij nog kon uitbloeien.\n\n'
+        '• «Geoogst», je plukte wat eetbaar is en bent klaar met dit gewas in de moestuin.\n'
+        '• «Seizoen afronden», je eet niet (meer) mee en haalt de plant weg terwijl hij nog kon uitbloeien.\n\n'
         'Beide keuzes archiveren de plant; scans blijven bewaard.',
-    snackBarDone: '$plantNameNl staat in History — smakelijk!',
+    snackBarDone: '$plantNameNl staat in History, smakelijk!',
   );
 }
 
@@ -263,7 +263,7 @@ CropHarvestUiCopy _standardFoodHarvestCopy({required String plantNameNl}) {
         'Deze plant wordt verwijderd uit je moestuin en opgeslagen in History.',
     infoTitle: 'Info over oogsten',
     infoBody:
-        'Veel groenten kun je meerdere keren oogsten — niet alles hoeft in één keer weg.\n\n'
+        'Veel groenten kun je meerdere keren oogsten, niet alles hoeft in één keer weg.\n\n'
         '• Tomaten, komkommers, bonen: pluk regelmatig rijpe vruchten.\n'
         '• Sla, snijbiet: oogst buitenste bladeren.\n'
         '• Wortel, aardappel: controleer eerst met een proefoogst.\n\n'

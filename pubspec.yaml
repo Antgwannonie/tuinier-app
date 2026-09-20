@@ -17,14 +17,56 @@ dependencies:
   path_provider: ^2.1.4
   timezone: ^0.10.0
   google_fonts: ^6.2.1
+  image: ^4.5.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  image: ^4.5.4
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/vegetables/
+    - assets/images/garden_health/
+    - assets/images/moestuin_place/
+    - assets/images/scan_hub/
+    - assets/images/sowing/
+    - assets/images/transplant/
+    - assets/images/location/
+    - assets/images/water/
+    - assets/images/nutrition/
+    - assets/images/growth/
+    - assets/images/bloom/
+    - assets/images/harvest/
+    - assets/images/care/
+    - assets/images/problems/
+    - assets/images/combination/
+    - assets/images/plant_info_tabs/
+    - assets/images/overview/
+    - assets/images/flower_overview/
+    - assets/images/flower_sowing/
+    - assets/images/flower_transplant/
+    - assets/images/flower_growth/
+    - assets/images/flower_bloom/
+    - assets/images/flower_seed_harvest/
+    - assets/images/flower_care/
+    - assets/images/flower_combinations/
+    - assets/images/flower_problems/
+    - assets/images/flower_weetjes/
+    - assets/images/calendar/
+    - assets/images/weetjes/
+    - assets/images/mushroom_substrate/
+    - assets/images/mushroom_inoculation/
+    - assets/images/mushroom_colonization/
+    - assets/images/mushroom_fruiting/
+    - assets/images/mushroom_environment/
+    - assets/images/mushroom_water/
+    - assets/images/mushroom_growth/
+    - assets/images/mushroom_flushes/
+    - assets/images/mushroom_harvest/
+    - assets/images/mushroom_problems/
+    - assets/images/mushroom_storage/
+    - assets/images/mushroom_facts/
+    - assets/images/mushroom_info_tabs/
+    - assets/images/planner/

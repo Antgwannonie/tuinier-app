@@ -39,12 +39,13 @@ Future<bool> confirmAndCopyHistorySeasonToGarden(
   required GardenProfileStore profileStore,
   required VegetableRepository repository,
   required GardenScanPrefsStore scanPrefs,
+  String? confirmTitle,
 }) {
   return _confirmAndCopy(
     context,
     plantCount: archivedProfiles.length,
     dateLabel: '$year',
-    title: 'Planten van $year opnieuw in moestuin?',
+    title: confirmTitle ?? 'Planten weer hervatten?',
     gardenStore: gardenStore,
     profileStore: profileStore,
     repository: repository,
@@ -82,13 +83,13 @@ Future<bool> _confirmAndCopy(
           children: [
             Text(
               plantCount == 1
-                  ? '1 plant van $dateLabel komt in Mijn moestuin.'
-                  : '$plantCount planten van $dateLabel komen in Mijn moestuin.',
+                  ? 'Je hervat 1 plant uit $dateLabel in je huidige moestuin.'
+                  : 'Je hervat $plantCount planten uit $dateLabel in je huidige moestuin.',
             ),
             const SizedBox(height: 10),
             Text(
-              'Je begint opnieuw zonder scans of oogstgeschiedenis. '
-              'Locatie en zon worden overgenomen; je vinkt “geplant” weer aan wanneer het in de grond staat.',
+              'Alsof je een nieuw seizoen start: opnieuw planten, zonder oude oogst of scans. '
+              'Locatie en zon blijven; je geeft zelf aan wanneer iets weer in de grond staat.',
               style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.35,
@@ -96,7 +97,7 @@ Future<bool> _confirmAndCopy(
             ),
             const SizedBox(height: 10),
             Text(
-              'Alles in History blijft bewaard — niets wordt daar verwijderd.',
+              'History blijft gewoon staan, je archief verandert niet.',
               style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: cs.primary,
                     fontWeight: FontWeight.w600,
@@ -124,7 +125,7 @@ Future<bool> _confirmAndCopy(
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Ja, in moestuin zetten'),
+            child: const Text('Ja, hervatten'),
           ),
         ],
       );
@@ -155,8 +156,8 @@ Future<bool> _confirmAndCopy(
   if (result.restored > 0) {
     msg.write(
       result.restored == 1
-          ? '1 plant toegevoegd aan Mijn moestuin'
-          : '${result.restored} planten toegevoegd aan Mijn moestuin',
+          ? '1 plant hervat, fris seizoen in je moestuin'
+          : '${result.restored} planten hervat, fris seizoen in je moestuin',
     );
   }
   if (result.skipped > 0) {

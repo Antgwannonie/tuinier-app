@@ -9,9 +9,16 @@ import '../data/garden_notifications_sync.dart';
 import '../data/crop_harvest_kind.dart';
 import '../data/garden_plant_schedule.dart';
 import '../data/garden_scan_prefs_store.dart';
+import '../data/moestuin_pinned_action.dart';
+import '../data/insect_scan_store.dart';
 import '../data/my_garden_store.dart';
+import '../data/weed_scan_store.dart';
+import '../widgets/scan_mode_selector.dart';
 import '../data/garden_notes_store.dart';
 import '../data/ai_scan_coach_tasks.dart';
+import '../data/plant_count_scan.dart';
+import '../data/plant_multi_scan_service.dart';
+import '../data/plant_search_filters.dart';
 import '../data/plant_photo_ai_service.dart';
 import '../data/planting_timing_advice.dart';
 import '../data/plant_scan_consistency.dart';
@@ -22,8 +29,11 @@ import '../models/garden_plant_profile.dart';
 import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
 import '../widgets/garden_warning_style.dart';
+import '../screens/scan_result_screen.dart';
 import '../widgets/plant_scan_result_card.dart';
+import '../widgets/tuinier_scan_stores_scope.dart';
 import '../widgets/vegetable_thumbnail.dart';
+import 'scan_hub_types.dart';
 
 /// Foto maken → AI beoordeelt groeifase en oogstmoment.
 class PlantScanScreen extends StatefulWidget {
@@ -35,8 +45,15 @@ class PlantScanScreen extends StatefulWidget {
     required this.aiSettings,
     required this.scanPrefs,
     required this.notesStore,
+    this.insectScanStore,
+    this.weedScanStore,
     this.initialVegetableId,
     this.initialHarvestProbe = false,
+    this.initialScanMode,
+    this.initialHubEntry,
+    this.plantBrowseFilter,
+    this.showHubBack = false,
+    this.onBackToHub,
   });
 
   final VegetableRepository repository;
@@ -45,8 +62,15 @@ class PlantScanScreen extends StatefulWidget {
   final AiSettingsStore aiSettings;
   final GardenScanPrefsStore scanPrefs;
   final GardenNotesStore notesStore;
+  final InsectScanStore? insectScanStore;
+  final WeedScanStore? weedScanStore;
   final String? initialVegetableId;
   final bool initialHarvestProbe;
+  final ScanSubjectMode? initialScanMode;
+  final ScanHubEntry? initialHubEntry;
+  final PlantBrowseKind? plantBrowseFilter;
+  final bool showHubBack;
+  final VoidCallback? onBackToHub;
 
   @override
   State<PlantScanScreen> createState() => _PlantScanScreenState();
@@ -60,16 +84,30 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
   bool _analyzing = false;
   String? _error;
   PlantAiAnalysis? _lastResult;
+  String? _lastScanPhotoPath;
   final _apiKeyController = TextEditingController();
   final _plantSearchController = TextEditingController();
   bool _plantPickerExpanded = false;
   late bool _harvestProbeMode;
+  ScanSubjectMode _scanMode = ScanSubjectMode.plant;
+  int _plantCountInput = 1;
+  bool _plantCountConfirmed = false;
+  List<Uint8List?> _sessionPhotos = [];
+  int _currentPhotoSlot = 0;
+
+  InsectScanStore get _insectScanStore =>
+      widget.insectScanStore ??
+      TuinierScanStoresScope.of(context).insectScanStore;
+
+  WeedScanStore get _weedScanStore =>
+      widget.weedScanStore ?? TuinierScanStoresScope.of(context).weedScanStore;
 
   @override
   void initState() {
     super.initState();
     _selectedId = widget.initialVegetableId;
     _harvestProbeMode = widget.initialHarvestProbe;
+    _scanMode = widget.initialScanMode ?? ScanSubjectMode.plant;
     _plantPickerExpanded = widget.initialVegetableId == null;
     _apiKeyController.text = widget.aiSettings.apiKey;
     widget.gardenStore.addListener(_onStoresChanged);
@@ -79,14 +117,47 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
   }
 
   void _pickDefaultPlant() {
-    if (_selectedId != null) return;
-    final ids = widget.gardenStore.ids.toList();
-    if (ids.isEmpty) return;
-    setState(() => _selectedId = ids.first);
+    if (widget.initialVegetableId != null &&
+        widget.gardenStore.contains(widget.initialVegetableId!)) {
+      if (_selectedId != widget.initialVegetableId) {
+        setState(() {
+          _selectedId = widget.initialVegetableId;
+          _resetMultiScanSession();
+        });
+      }
+      return;
+    }
+
+    final plants = _myPlants;
+    if (plants.isEmpty) {
+      if (_selectedId != null) {
+        setState(() {
+          _selectedId = null;
+          _resetMultiScanSession();
+        });
+      }
+      return;
+    }
+    if (_selectedId == null || !plants.any((v) => v.id == _selectedId)) {
+      setState(() {
+        _selectedId = plants.first.id;
+        _resetMultiScanSession();
+      });
+    }
   }
 
   void _onStoresChanged() {
-    if (mounted) setState(() {});
+    if (mounted && !_analyzing) _pickDefaultPlant();
+  }
+
+  void _pauseStoreListeners() {
+    widget.gardenStore.removeListener(_onStoresChanged);
+    widget.profileStore.removeListener(_onStoresChanged);
+  }
+
+  void _resumeStoreListeners() {
+    widget.gardenStore.addListener(_onStoresChanged);
+    widget.profileStore.addListener(_onStoresChanged);
   }
 
   @override
@@ -118,15 +189,90 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
       _error = null;
       _plantPickerExpanded = false;
       _plantSearchController.clear();
+      _resetMultiScanSession();
     });
   }
 
+  void _resetMultiScanSession() {
+    final stored = _selectedProfile?.plantCount;
+    _plantCountInput = (stored != null && stored > 0) ? stored : 1;
+    _plantCountConfirmed = false;
+    _sessionPhotos = [];
+    _currentPhotoSlot = 0;
+    _imageBytes = null;
+    _mimeType = null;
+    _error = null;
+  }
+
+  List<ScanPhotoSlot> get _photoSlots =>
+      scanPhotoSlotsForPlantCount(_plantCountInput);
+
+  bool get _usesMultiPlantScan =>
+      _scanMode == ScanSubjectMode.plant &&
+      !_harvestProbeMode &&
+      widget.initialVegetableId == null;
+
+  /// Scan geopend via hub, taak of plantkaart — geen modus-wisselaar.
+  bool get _isDirectEntryScan =>
+      widget.showHubBack ||
+      widget.initialVegetableId != null ||
+      widget.initialHarvestProbe ||
+      widget.initialHubEntry != null;
+
+  bool get _allSessionPhotosCaptured {
+    if (!_usesMultiPlantScan || !_plantCountConfirmed) return false;
+    final slots = _photoSlots;
+    if (_sessionPhotos.length < slots.length) return false;
+    return _sessionPhotos.take(slots.length).every((p) => p != null);
+  }
+
+  Uint8List? get _currentSlotBytes {
+    if (_currentPhotoSlot < _sessionPhotos.length) {
+      return _sessionPhotos[_currentPhotoSlot];
+    }
+    return null;
+  }
+
   List<Vegetable> get _myPlants {
-    return widget.gardenStore.ids
+    final plants = widget.gardenStore.ids
         .map(widget.repository.byId)
         .whereType<Vegetable>()
-        .toList()
-      ..sort((a, b) => a.nameNl.compareTo(b.nameNl));
+        .where((v) {
+          final profile = widget.profileStore.profileFor(v.id);
+          if (profile == null ||
+              !profile.isPlanted ||
+              !profile.isMoestuinActive) {
+            return false;
+          }
+          final filter = widget.plantBrowseFilter;
+          if (filter == null) return true;
+          return browseKindForPlant(v.id) == filter;
+        })
+        .toList();
+
+    final targetId = widget.initialVegetableId;
+    if (targetId != null &&
+        widget.gardenStore.contains(targetId) &&
+        !plants.any((v) => v.id == targetId)) {
+      final veg = widget.repository.byId(targetId);
+      final profile = widget.profileStore.profileFor(targetId);
+      if (veg != null && profile != null) {
+        plants.add(veg);
+      }
+    }
+
+    plants.sort((a, b) => a.nameNl.compareTo(b.nameNl));
+    return plants;
+  }
+
+  bool get _canScanSelected {
+    final profile = _selectedProfile;
+    if (profile == null) return false;
+    if (widget.initialVegetableId != null &&
+        _selectedId == widget.initialVegetableId) {
+      return widget.gardenStore.contains(_selectedId!);
+    }
+    return profile.isPlanted && profile.isMoestuinActive;
   }
 
   Vegetable? get _selected =>
@@ -224,7 +370,15 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
       if (file == null) return;
       final bytes = await file.readAsBytes();
       setState(() {
-        _imageBytes = bytes;
+        if (_usesMultiPlantScan && _plantCountConfirmed) {
+          while (_sessionPhotos.length <= _currentPhotoSlot) {
+            _sessionPhotos.add(null);
+          }
+          _sessionPhotos[_currentPhotoSlot] = bytes;
+          _imageBytes = bytes;
+        } else {
+          _imageBytes = bytes;
+        }
         _mimeType = 'image/jpeg';
         _error = null;
         _lastResult = null;
@@ -234,13 +388,200 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
     }
   }
 
+  void _confirmPlantCount() {
+    final slots = scanPhotoSlotsForPlantCount(_plantCountInput);
+    final pendingPhoto = _imageBytes;
+    setState(() {
+      _plantCountConfirmed = true;
+      _sessionPhotos = List<Uint8List?>.filled(slots.length, null);
+      if (pendingPhoto != null) {
+        _sessionPhotos[0] = pendingPhoto;
+      }
+      _currentPhotoSlot = 0;
+      _imageBytes = _sessionPhotos.isNotEmpty ? _sessionPhotos[0] : null;
+      _error = null;
+      _lastResult = null;
+    });
+    if (pendingPhoto != null && slots.length == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _analyze();
+      });
+    }
+  }
+
+  void _goToNextPhotoSlot() {
+    final slots = _photoSlots;
+    if (_currentSlotBytes == null) {
+      setState(() => _error = 'Maak eerst een foto voor deze plant.');
+      return;
+    }
+    if (_currentPhotoSlot >= slots.length - 1) return;
+    setState(() {
+      _currentPhotoSlot++;
+      _imageBytes = _currentSlotBytes;
+      _error = null;
+    });
+  }
+
+  void _goToPreviousPhotoSlot() {
+    if (_currentPhotoSlot <= 0) return;
+    setState(() {
+      _currentPhotoSlot--;
+      _imageBytes = _currentSlotBytes;
+      _error = null;
+    });
+  }
+
+  void _changePlantCount() {
+    setState(() {
+      _plantCountConfirmed = false;
+      _sessionPhotos = [];
+      _currentPhotoSlot = 0;
+      _imageBytes = null;
+      _error = null;
+    });
+  }
+
+  Future<void> _analyzeWeed() async {
+    if (_imageBytes == null) {
+      setState(() => _error = 'Maak eerst een foto van het onkruid.');
+      return;
+    }
+
+    setState(() {
+      _analyzing = true;
+      _error = null;
+      _lastResult = null;
+    });
+
+    final spaceId =
+        widget.gardenStore.activeSpace?.id ?? 'tuin_default';
+
+    await _weedScanStore.addEntry(
+      WeedScanEntry(
+        id: 'weed_${DateTime.now().millisecondsSinceEpoch}',
+        tuinSpaceId: spaceId,
+        nameNl: 'Onkruid (scan)',
+        impact: WeedImpact.neutral,
+        summary:
+            'Onkruid-AI volgt in een volgende update. Entry staat in je logboek.',
+        scannedAt: DateTime.now(),
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() => _analyzing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Onkruid opgeslagen in Inzicht. Volledige herkenning komt later.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _analyzeInsect() async {
+    if (_imageBytes == null) {
+      setState(() => _error = 'Maak eerst een foto van het insect.');
+      return;
+    }
+
+    setState(() {
+      _analyzing = true;
+      _error = null;
+      _lastResult = null;
+    });
+
+    final spaceId =
+        widget.gardenStore.activeSpace?.id ?? 'tuin_default';
+
+    await _insectScanStore.addEntry(
+      InsectScanEntry(
+        id: 'ins_${DateTime.now().millisecondsSinceEpoch}',
+        tuinSpaceId: spaceId,
+        nameNl: 'Insect (scan)',
+        benefit: InsectBenefit.neutral,
+        summary:
+            'Insecten-AI volgt in een volgende update. Entry staat in je logboek.',
+        scannedAt: DateTime.now(),
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() => _analyzing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Insect opgeslagen in Inzicht. Volledige herkenning komt later.',
+        ),
+      ),
+    );
+  }
+
+  void _syncCurrentSlotFromImageBytes() {
+    if (!_usesMultiPlantScan || !_plantCountConfirmed || _imageBytes == null) {
+      return;
+    }
+    while (_sessionPhotos.length <= _currentPhotoSlot) {
+      _sessionPhotos.add(null);
+    }
+    _sessionPhotos[_currentPhotoSlot] ??= _imageBytes;
+  }
+
+  List<Uint8List> _snapshotMultiScanPhotos() {
+    _syncCurrentSlotFromImageBytes();
+    final slots = _photoSlots;
+    final photos = <Uint8List>[];
+    for (var i = 0; i < slots.length; i++) {
+      Uint8List? bytes;
+      if (i < _sessionPhotos.length) {
+        bytes = _sessionPhotos[i];
+      }
+      if (bytes == null && i == _currentPhotoSlot) {
+        bytes = _imageBytes;
+      }
+      if (bytes != null) {
+        photos.add(Uint8List.fromList(bytes));
+      }
+    }
+    return photos;
+  }
+
   Future<void> _analyze() async {
+    if (_scanMode == ScanSubjectMode.insect) {
+      await _analyzeInsect();
+      return;
+    }
+    if (_scanMode == ScanSubjectMode.weed) {
+      await _analyzeWeed();
+      return;
+    }
+
     final veg = _selected;
     if (veg == null) {
       setState(() => _error = 'Kies eerst een gewas uit Mijn moestuin.');
       return;
     }
-    if (_imageBytes == null) {
+    final profile = widget.profileStore.profileFor(veg.id);
+    if (profile == null || !profile.isPlanted || !profile.isMoestuinActive) {
+      setState(() {
+        _error =
+            'Markeer de plant eerst als gezaaid of geplant op Mijn moestuin.';
+        _analyzing = false;
+      });
+      return;
+    }
+    if (_usesMultiPlantScan) {
+      _syncCurrentSlotFromImageBytes();
+      if (!_plantCountConfirmed) {
+        setState(() => _error = 'Geef eerst aan hoeveel planten je hebt.');
+        return;
+      }
+      if (!_allSessionPhotosCaptured) {
+        setState(() => _error = 'Maak eerst alle benodigde foto\'s.');
+        return;
+      }
+    } else if (_imageBytes == null) {
       setState(() => _error = 'Maak eerst een foto (ook van grond of zaadbed).');
       return;
     }
@@ -255,9 +596,19 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
       _error = null;
     });
 
+    final multiScanPhotos = _usesMultiPlantScan && _plantCountConfirmed
+        ? _snapshotMultiScanPhotos()
+        : null;
+    final singlePhotoBytes =
+        !_usesMultiPlantScan && _imageBytes != null
+            ? Uint8List.fromList(_imageBytes!)
+            : null;
+
+    _pauseStoreListeners();
     try {
       await widget.profileStore.ensureProfile(veg.id);
       final profile = widget.profileStore.profileFor(veg.id)!;
+      final previousAnalysis = profile.lastAnalysis;
       final cal = calendarLabelsFor(veg.id);
       final timing = assessPlantingTiming(vegetable: veg, profile: profile);
       final outsideSeason = !profile.plantingDateUnknown &&
@@ -276,24 +627,62 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
               )
               .inDays;
       final service = PlantPhotoAiService(apiKey: widget.aiSettings.apiKey);
-      final imageFingerprint = fingerprintImageBytes(_imageBytes!);
-      final result = await service.analyze(
-        imageBytes: _imageBytes!,
-        mimeType: _mimeType ?? 'image/jpeg',
-        vegetable: veg,
-        plantedAt: profile.plantedAt,
-        plantingDateUnknown: profile.plantingDateUnknown,
-        locationLabel: profile.location.label,
-        sunLabel: profile.sunLevel.label,
-        outsidePlantingSeason: outsideSeason,
-        plantWindowLabel: cal.plant,
-        harvestWindowLabel: cal.harvest,
-        daysSinceStatedPlantDate: daysSince,
-        previousAnalysis: profile.lastAnalysis,
-        previousImageFingerprint: profile.lastScanImageFingerprint,
-        isFirstScan: profile.lastAnalysis == null,
-        isHarvestProbePhoto: _harvestProbeMode,
-      );
+      final mime = _mimeType ?? 'image/jpeg';
+
+      late final PlantAiAnalysis result;
+      late final Uint8List photoToSave;
+      late final String imageFingerprint;
+
+      if (_usesMultiPlantScan) {
+        final slots = _photoSlots;
+        final photos = multiScanPhotos ?? _snapshotMultiScanPhotos();
+        if (photos.length < slots.length) {
+          throw PlantPhotoAiException(
+            'Maak eerst alle benodigde foto\'s.',
+          );
+        }
+        if (photos.isEmpty) {
+          throw PlantPhotoAiException(
+            'Geen foto\'s om te analyseren. Kies opnieuw een foto.',
+          );
+        }
+        final multi = await runMultiPlantScan(
+          service: service,
+          photos: photos,
+          slots: slots,
+          plantCount: _plantCountInput,
+          vegetable: veg,
+          profile: profile,
+          mimeType: mime,
+          plantWindowLabel: cal.plant,
+          harvestWindowLabel: cal.harvest,
+          outsidePlantingSeason: outsideSeason,
+          daysSinceStatedPlantDate: daysSince,
+        );
+        result = multi.analysis;
+        photoToSave = photos[multi.bestPhotoIndex];
+        imageFingerprint = fingerprintImageBytes(photoToSave);
+      } else {
+        photoToSave = singlePhotoBytes ?? _imageBytes!;
+        imageFingerprint = fingerprintImageBytes(photoToSave);
+        result = await service.analyze(
+          imageBytes: photoToSave,
+          mimeType: mime,
+          vegetable: veg,
+          plantedAt: profile.plantedAt,
+          plantingDateUnknown: profile.plantingDateUnknown,
+          locationLabel: profile.location.label,
+          sunLabel: profile.sunLevel.label,
+          outsidePlantingSeason: outsideSeason,
+          plantWindowLabel: cal.plant,
+          harvestWindowLabel: cal.harvest,
+          daysSinceStatedPlantDate: daysSince,
+          previousAnalysis: profile.lastAnalysis,
+          previousImageFingerprint: profile.lastScanImageFingerprint,
+          isFirstScan: profile.lastAnalysis == null,
+          isHarvestProbePhoto: _harvestProbeMode,
+        );
+      }
 
       final notSavedMessage = scanNotPersistedMessage(result);
 
@@ -315,14 +704,23 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
 
       final photoPath = await PlantScanPhotoStore.saveScanPhoto(
         veg.id,
-        _imageBytes!,
+        photoToSave,
       );
-      final updated = applyAiScanToProfile(
+      var updated = applyAiScanToProfile(
         profile,
         result,
         weeklyScanIntervalDays: widget.scanPrefs.weeklyScanIntervalDays,
+        vegetable: veg,
         imageFingerprint: imageFingerprint,
         newScanPhotoPath: photoPath,
+      );
+      if (_usesMultiPlantScan) {
+        updated = updated.copyWith(plantCount: _plantCountInput);
+      }
+      updated = syncPinnedMoestuinAction(
+        profile: updated,
+        vegetable: veg,
+        scanPrefs: widget.scanPrefs,
       );
       await widget.profileStore.saveProfile(updated);
       await syncGardenNotifications(
@@ -337,18 +735,36 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
         final wasProbe = _harvestProbeMode;
         setState(() {
           _lastResult = result;
+          _lastScanPhotoPath = photoPath;
           _analyzing = false;
           if (wasProbe) _harvestProbeMode = false;
         });
+        if (_usesMultiPlantScan) {
+          final slots = _photoSlots;
+          _sessionPhotos = List<Uint8List?>.filled(slots.length, null);
+          _currentPhotoSlot = 0;
+          _imageBytes = null;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               wasProbe
-                  ? 'Proefoogst-scan opgeslagen — bekijk of je kunt oogsten'
-                  : 'Scan opgeslagen in je plantgeschiedenis',
+                  ? 'Proefoogst-scan opgeslagen · bekijk of je kunt oogsten'
+                  : _usesMultiPlantScan
+                      ? 'Scan opgeslagen · mooiste plant staat op je moestuin-kaart'
+                      : 'Scan opgeslagen in je plantgeschiedenis',
             ),
           ),
         );
+        if (scanResultSupportsFullPage(result)) {
+          await openScanResultScreen(
+            context,
+            analysis: result,
+            vegetable: veg,
+            previousAnalysis: previousAnalysis,
+            onNewScan: () => Navigator.of(context).pop(),
+          );
+        }
       }
     } on PlantPhotoAiException catch (e) {
       if (mounted) {
@@ -364,6 +780,8 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
           _analyzing = false;
         });
       }
+    } finally {
+      _resumeStoreListeners();
     }
   }
 
@@ -415,7 +833,7 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
 
   String? _scanHintForProfile(GardenPlantProfile? profile) {
     if (profile == null || !profile.isPlanted) {
-      return 'Markeer de plant als geplant op Mijn moestuin.';
+      return 'Markeer de plant eerst als gezaaid of geplant op Mijn moestuin.';
     }
     if (awaitingFirstPhotoScan(profile)) {
       return kFirstScanShortLabel;
@@ -445,6 +863,12 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
       backgroundColor: cs.surface,
       appBar: AppBar(
         centerTitle: true,
+        leading: widget.showHubBack
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onBackToHub,
+              )
+            : null,
         title: const Text('AI-scan'),
         actions: [
           IconButton(
@@ -462,10 +886,61 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
           _ScanHeroHeader(hasApiKey: hasApiKey, onApiTap: _openApiKeySheet),
+          if (!_isDirectEntryScan) ...[
+            const SizedBox(height: 12),
+            ScanModeSelector(
+              mode: _scanMode,
+              onChanged: (m) => setState(() {
+                _scanMode = m;
+                _error = null;
+              }),
+            ),
+          ],
+          if (widget.gardenStore.activeSpace != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Moestuin: ${widget.gardenStore.activeSpace!.name}',
+              style: t.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
-          if (plants.isEmpty)
+          if (widget.initialHubEntry == ScanHubEntry.plantDisease) ...[
+            const _ScanContextBanner(
+              icon: Icons.coronavirus_outlined,
+              title: 'Plant ziekte scannen',
+              body:
+                  'Richt de camera op zieke bladeren, vlekken, schimmel of '
+                  'beschadigd weefsel op je plant.',
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (_scanMode == ScanSubjectMode.insect ||
+              _scanMode == ScanSubjectMode.weed) ...[
+            if (_scanMode == ScanSubjectMode.weed) ...[
+              const _ScanContextBanner(
+                icon: Icons.grass_outlined,
+                title: 'Onkruid scannen',
+                body:
+                    'Maak een foto van ongewenste planten in je tuin om te '
+                    'leren wat het is en wat je ermee kunt doen.',
+              ),
+              const SizedBox(height: 16),
+            ],
+            _PhotoCaptureCard(
+              imageBytes: _imageBytes,
+              analyzing: _analyzing,
+              onCamera: () => _pickImage(ImageSource.camera),
+              onGallery: () => _pickImage(ImageSource.gallery),
+              onAnalyze: _analyze,
+              canAnalyze: _imageBytes != null && !_analyzing,
+            ),
+          ] else if (plants.isEmpty)
             _EmptyGardenCard(
-              onAddHint: 'Voeg groenten toe via Mijn moestuin (+).',
+              onAddHint: widget.gardenStore.isEmpty
+                  ? 'Voeg planten toe via Mijn moestuin (+).'
+                  : 'Markeer eerst je planten als gezaaid of geplant op Mijn moestuin.',
             )
           else ...[
             _CollapsiblePlantPicker(
@@ -491,38 +966,114 @@ class _PlantScanScreenState extends State<PlantScanScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            _PhotoCaptureCard(
-              imageBytes: _imageBytes,
-              analyzing: _analyzing,
-              onCamera: () => _pickImage(ImageSource.camera),
-              onGallery: () => _pickImage(ImageSource.gallery),
-              onAnalyze: _analyze,
-              canAnalyze: _imageBytes != null && !_analyzing && hasApiKey,
-            ),
+            if (_usesMultiPlantScan && !_plantCountConfirmed) ...[
+              _PlantCountCard(
+                plantName: _selected?.nameNl ?? 'dit gewas',
+                count: _plantCountInput,
+                imageBytes: _imageBytes,
+                analyzing: _analyzing,
+                onCamera: () => _pickImage(ImageSource.camera),
+                onGallery: () => _pickImage(ImageSource.gallery),
+                onDecrement: _plantCountInput > 1
+                    ? () => setState(() => _plantCountInput--)
+                    : null,
+                onIncrement: _plantCountInput < 99
+                    ? () => setState(() => _plantCountInput++)
+                    : null,
+                onConfirm: _confirmPlantCount,
+              ),
+            ] else if (_usesMultiPlantScan && _plantCountConfirmed) ...[
+              _MultiPlantScanCard(
+                plantCount: _plantCountInput,
+                slots: _photoSlots,
+                currentSlot: _currentPhotoSlot,
+                sessionPhotos: _sessionPhotos,
+                imageBytes: _currentSlotBytes ?? _imageBytes,
+                analyzing: _analyzing,
+                onCamera: () => _pickImage(ImageSource.camera),
+                onGallery: () => _pickImage(ImageSource.gallery),
+                onPrevious: _currentPhotoSlot > 0 ? _goToPreviousPhotoSlot : null,
+                onNext: _currentPhotoSlot < _photoSlots.length - 1
+                    ? _goToNextPhotoSlot
+                    : null,
+                onChangeCount: _changePlantCount,
+                onAnalyze: _analyze,
+                canAnalyze:
+                    _canScanSelected &&
+                    _allSessionPhotosCaptured &&
+                    !_analyzing &&
+                    hasApiKey,
+              ),
+            ] else
+              _PhotoCaptureCard(
+                imageBytes: _imageBytes,
+                analyzing: _analyzing,
+                onCamera: () => _pickImage(ImageSource.camera),
+                onGallery: () => _pickImage(ImageSource.gallery),
+                onAnalyze: _analyze,
+                canAnalyze: _canScanSelected &&
+                    _imageBytes != null &&
+                    !_analyzing &&
+                    hasApiKey,
+              ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 14),
             _ErrorBanner(message: _error!),
           ],
           if (display != null) ...[
-            const SizedBox(height: 20),
-            Text(
-              'Laatste resultaat',
-              style: t.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+            if (scanResultSupportsFullPage(display))
+              _ScanResultOpenBanner(
+                vegetableName: _selected?.nameNl ?? 'Plant',
+                onOpen: () => openScanResultScreen(
+                  context,
+                  analysis: display,
+                  vegetable: _selected,
+                  previousAnalysis: _lastResult != null &&
+                          stored != null &&
+                          stored.scannedAt != display.scannedAt
+                      ? stored
+                      : null,
+                  onNewScan: () {
+                    setState(() {
+                      _lastResult = null;
+                      _imageBytes = null;
+                      _error = null;
+                    });
+                  },
+                ),
+              )
+            else
+              PlantScanResultCard(
+                analysis: display,
+                vegetable: _selected,
+                previousAnalysis: _lastResult != null &&
+                        stored != null &&
+                        stored.scannedAt != _lastResult!.scannedAt
+                    ? stored
+                    : null,
+                scanPhotoPath:
+                    _lastScanPhotoPath ?? profile?.lastScanPhotoPath,
+                onNewScan: () {
+                  setState(() {
+                    _lastResult = null;
+                    _imageBytes = null;
+                    _error = null;
+                  });
+                },
+                savedToHistory: shouldPersistAiScan(display),
+                ornamentalBloomOnly: _selected != null &&
+                    isOrnamentalOnlyMoestuinCrop(_selected!),
+                edibleBloomDual: _selected != null &&
+                    isEdibleMoestuinBloomCrop(_selected!),
               ),
-            ),
-            const SizedBox(height: 10),
-            PlantScanResultCard(
-              analysis: display,
-              savedToHistory: shouldPersistAiScan(display),
-              ornamentalBloomOnly: _selected != null &&
-                  isOrnamentalOnlyMoestuinCrop(_selected!),
-              edibleBloomDual: _selected != null &&
-                  isEdibleMoestuinBloomCrop(_selected!),
-            ),
             if (!display.hasCropMismatch &&
                 display.insight != null &&
+                (_selectedId == null ||
+                    widget.profileStore
+                            .profileFor(_selectedId!)
+                            ?.isMoestuinActive ==
+                        true) &&
                 (display.insight!.coachTasks.isNotEmpty ||
                     display.insight!.recommendedActions.isNotEmpty)) ...[
               const SizedBox(height: 10),
@@ -756,6 +1307,60 @@ class _CollapsiblePlantPicker extends StatelessWidget {
   }
 }
 
+class _ScanContextBanner extends StatelessWidget {
+  const _ScanContextBanner({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+
+    return Material(
+      color: cs.primaryContainer.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: cs.primary, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: t.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    body,
+                    style: t.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _FirstScanMotivationBanner extends StatelessWidget {
   const _FirstScanMotivationBanner();
 
@@ -872,6 +1477,352 @@ class _ScanHeroHeader extends StatelessWidget {
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlantCountCard extends StatelessWidget {
+  const _PlantCountCard({
+    required this.plantName,
+    required this.count,
+    required this.imageBytes,
+    required this.analyzing,
+    required this.onCamera,
+    required this.onGallery,
+    required this.onDecrement,
+    required this.onIncrement,
+    required this.onConfirm,
+  });
+
+  final String plantName;
+  final int count;
+  final Uint8List? imageBytes;
+  final bool analyzing;
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onIncrement;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+    final hasPhoto = imageBytes != null;
+
+    return Material(
+      color: cs.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (hasPhoto)
+            AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Image.memory(imageBytes!, fit: BoxFit.cover),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Hoeveel $plantName heb je?',
+                  style: t.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  multiScanIntroText(count),
+                  style: t.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SourceButton(
+                        icon: Icons.photo_camera_outlined,
+                        label: 'Camera',
+                        onTap: analyzing ? null : onCamera,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _SourceButton(
+                        icon: Icons.photo_library_outlined,
+                        label: 'Galerij',
+                        onTap: analyzing ? null : onGallery,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: onDecrement,
+                      icon: const Icon(Icons.remove),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        '$count',
+                        style: t.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      onPressed: onIncrement,
+                      icon: const Icon(Icons.add),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: analyzing ? null : onConfirm,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    count <= 5
+                        ? 'Start · $count ${count == 1 ? 'foto' : 'foto\'s'}'
+                        : 'Start · 5 foto\'s (steekproef)',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MultiPlantScanCard extends StatelessWidget {
+  const _MultiPlantScanCard({
+    required this.plantCount,
+    required this.slots,
+    required this.currentSlot,
+    required this.sessionPhotos,
+    required this.imageBytes,
+    required this.analyzing,
+    required this.onCamera,
+    required this.onGallery,
+    this.onPrevious,
+    this.onNext,
+    required this.onChangeCount,
+    required this.onAnalyze,
+    required this.canAnalyze,
+  });
+
+  final int plantCount;
+  final List<ScanPhotoSlot> slots;
+  final int currentSlot;
+  final List<Uint8List?> sessionPhotos;
+  final Uint8List? imageBytes;
+  final bool analyzing;
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final VoidCallback onChangeCount;
+  final VoidCallback onAnalyze;
+  final bool canAnalyze;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+    final slot = slots[currentSlot];
+    final capturedCount =
+        sessionPhotos.take(slots.length).where((p) => p != null).length;
+
+    return Material(
+      color: cs.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Foto ${currentSlot + 1} van ${slots.length}',
+                        style: t.textTheme.labelMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        slot.label,
+                        style: t.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (plantCount > 5) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '$plantCount planten · $capturedCount van ${slots.length} klaar',
+                          style: t.textTheme.bodySmall?.copyWith(
+                            color: cs.primary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: analyzing ? null : onChangeCount,
+                  child: const Text('Aantal'),
+                ),
+              ],
+            ),
+          ),
+          AspectRatio(
+            aspectRatio: 4 / 3,
+            child: imageBytes != null
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.memory(imageBytes!, fit: BoxFit.cover),
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: Material(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                          child: InkWell(
+                            onTap: analyzing ? null : onCamera,
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.refresh,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Container(
+                    margin: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: cs.outlineVariant.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.photo_camera_outlined,
+                          size: 44,
+                          color: cs.primary.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Losse foto van deze plant',
+                          style: t.textTheme.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SourceButton(
+                        icon: Icons.photo_camera_outlined,
+                        label: 'Camera',
+                        onTap: analyzing ? null : onCamera,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _SourceButton(
+                        icon: Icons.photo_library_outlined,
+                        label: 'Galerij',
+                        onTap: analyzing ? null : onGallery,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (onPrevious != null)
+                      OutlinedButton(
+                        onPressed: analyzing ? null : onPrevious,
+                        child: const Text('Vorige'),
+                      ),
+                    const Spacer(),
+                    if (onNext != null)
+                      FilledButton.tonal(
+                        onPressed:
+                            imageBytes != null && !analyzing ? onNext : null,
+                        child: const Text('Volgende foto'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: canAnalyze ? onAnalyze : null,
+                  icon: analyzing
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: cs.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.auto_awesome),
+                  label: Text(
+                    analyzing
+                        ? 'AI analyseert ${slots.length} foto\'s…'
+                        : 'Analyseer alle foto\'s',
+                  ),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1158,6 +2109,74 @@ class _HarvestProbeBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ScanResultOpenBanner extends StatelessWidget {
+  const _ScanResultOpenBanner({
+    required this.vegetableName,
+    required this.onOpen,
+  });
+
+  final String vegetableName;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFECFDF5),
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onOpen,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFF15803D),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Scanresultaat · $vegetableName',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Bekijk taken, plantinfo en observaties',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
       ),
     );
   }

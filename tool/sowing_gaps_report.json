@@ -1,0 +1,311 @@
+{
+  "count": 55,
+  "profileCounts": {
+    "biet": 5,
+    "sla": 11,
+    "spinazie": 8,
+    "wortel": 9,
+    "radijs": 3,
+    "kool": 34,
+    "tomaat": 10,
+    "paprika": 19,
+    "komkommer": 4,
+    "courgette": 4,
+    "pompoen": 4,
+    "okra": 1,
+    "pepino": 1,
+    "meloen": 4,
+    "boon": 8,
+    "erwt": 6,
+    "ui": 13,
+    "prei": 3,
+    "knoflook": 3,
+    "aardappel": 5,
+    "fruit_zaad": 35,
+    "aubergine": 1,
+    "aardbei": 2,
+    "mais": 2,
+    "meerjarig": 5,
+    "kruid_zacht": 19,
+    "kardoen": 1,
+    "gember": 1,
+    "tauge": 1
+  },
+  "gaps": [
+    {
+      "id": "okra",
+      "profile": "okra",
+      "reason": "In NL vooral kas/zuidmuur; oogst wisselvallig in koele zomers."
+    },
+    {
+      "id": "pepino",
+      "profile": "pepino",
+      "reason": "In NL vooral kas/kuip; zaad minder gangbaar dan stek/plant."
+    },
+    {
+      "id": "knoflook",
+      "profile": "knoflook",
+      "reason": "Vegetatieve teelt / geen standaard zaadroute"
+    },
+    {
+      "id": "sjalot",
+      "profile": "knoflook",
+      "reason": "Vegetatieve teelt / geen standaard zaadroute"
+    },
+    {
+      "id": "knoflook_hardnekkig",
+      "profile": "knoflook",
+      "reason": "Vegetatieve teelt / geen standaard zaadroute"
+    },
+    {
+      "id": "aardappel",
+      "profile": "aardappel",
+      "reason": "Geen zaadteelt voor eetknollen; gebruik gecertificeerd pootgoed."
+    },
+    {
+      "id": "vroege_aardappel",
+      "profile": "aardappel",
+      "reason": "Geen zaadteelt voor eetknollen; gebruik gecertificeerd pootgoed."
+    },
+    {
+      "id": "vastkokende_aardappel",
+      "profile": "aardappel",
+      "reason": "Geen zaadteelt voor eetknollen; gebruik gecertificeerd pootgoed."
+    },
+    {
+      "id": "kruimige_aardappel",
+      "profile": "aardappel",
+      "reason": "Geen zaadteelt voor eetknollen; gebruik gecertificeerd pootgoed."
+    },
+    {
+      "id": "zoete_aardappel",
+      "profile": "aardappel",
+      "reason": "Geen zaadteelt voor eetknollen; gebruik gecertificeerd pootgoed."
+    },
+    {
+      "id": "aardpeer",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "aardbei",
+      "profile": "aardbei",
+      "reason": "Voor snelle oogst: koop plantgoed i.p.v. zaad."
+    },
+    {
+      "id": "aardbei_everbearer",
+      "profile": "aardbei",
+      "reason": "Voor snelle oogst: koop plantgoed i.p.v. zaad."
+    },
+    {
+      "id": "rabarber",
+      "profile": "meerjarig",
+      "reason": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "id": "asperge",
+      "profile": "meerjarig",
+      "reason": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "id": "groene_asperge",
+      "profile": "meerjarig",
+      "reason": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "id": "witte_asperge",
+      "profile": "meerjarig",
+      "reason": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "id": "artisjok",
+      "profile": "meerjarig",
+      "reason": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "id": "kardoen",
+      "profile": "kardoen",
+      "reason": "Minder gangbaar; bleektechniek bepaalt eetkwaliteit stengels."
+    },
+    {
+      "id": "appel",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "peer",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "kers",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "abrikoos",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "perzik",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "vijg",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "mango",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "avocado",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "kiwi",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "nectarine",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "mirabel",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "kriek",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "zure_kers",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "kweepeer",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "mispel",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "nashi_peer",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "mandarijn",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "citroenboom",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "limoen",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "granaatappel",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "walnoot",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "hazelnoot",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "kastanje_boom",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "kaki",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "framboos",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "braam",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "blauwe_bes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "rode_bes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "zwarte_bes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "physalis",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "jostabes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "vlierbes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "veenbes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "blauwe_regen_bes",
+      "profile": "fruit_zaad",
+      "reason": "Geen betrouwbare moestuin-zaai-route; gebruik plantgoed. Exacte stratificatie per soort niet volledig uitgewerkt in deze gids."
+    },
+    {
+      "id": "gember",
+      "profile": "gember",
+      "reason": "Geen zaadteelt — poot biologisch rizoom. Exacte rasseninfo beperkt."
+    },
+    {
+      "id": "tauge",
+      "profile": "tauge",
+      "reason": "Keukenkieming, geen zaaibed. Gebruik kiemgeschikte zaden (voedselveilig)."
+    }
+  ]
+}

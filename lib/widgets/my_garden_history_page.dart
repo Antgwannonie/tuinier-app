@@ -11,8 +11,8 @@ import '../data/vegetable_repository.dart';
 import '../models/garden_plant_profile.dart';
 import '../models/vegetable.dart';
 import 'plant_history_sheet.dart';
-import 'restore_moestuin_from_history.dart';
-import 'tuin_heading.dart';
+import 'resume_plants_from_history_sheet.dart';
+import '../theme/plant_setup_palette.dart';
 import 'vegetable_hero_image.dart';
 
 class MyGardenHistoryPage extends StatefulWidget {
@@ -35,12 +35,18 @@ class MyGardenHistoryPage extends StatefulWidget {
 
 class _MyGardenHistoryPageState extends State<MyGardenHistoryPage> {
   int? _selectedYear;
+  bool _filterExpanded = false;
+  String? _selectedTuinSpaceKey;
 
   @override
   void initState() {
     super.initState();
     widget.gardenStore.addListener(_refresh);
     widget.profileStore.addListener(_refresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await widget.profileStore.syncArchivedTuinSpaces(widget.gardenStore);
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -81,8 +87,6 @@ class _MyGardenHistoryPageState extends State<MyGardenHistoryPage> {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          _headerCard(context),
-          const SizedBox(height: 16),
           _emptyCard(
             context,
             icon: Icons.archive_outlined,
@@ -99,16 +103,55 @@ class _MyGardenHistoryPageState extends State<MyGardenHistoryPage> {
     final selectedYear = _selectedYear!;
     final season =
         seasons.where((s) => s.year == selectedYear).firstOrNull ?? seasons.last;
+    final moestuinOptions = _moestuinOptionsFor(season);
+    final showMoestuinFilter = moestuinOptions.isNotEmpty;
+    final List<_PlantHistoryItem> filteredPlants;
+    final String tuinSpaceFilter;
+    final String moestuinName;
+
+    if (showMoestuinFilter) {
+      _selectedTuinSpaceKey = _resolveSelectedMoestuinKey(
+        season,
+        moestuinOptions,
+        _selectedTuinSpaceKey,
+      );
+      tuinSpaceFilter = _selectedTuinSpaceKey!;
+      filteredPlants = _plantsForMoestuinFilter(season, tuinSpaceFilter);
+      moestuinName = moestuinOptions
+          .firstWhere((o) => o.key == tuinSpaceFilter)
+          .label;
+    } else {
+      filteredPlants = season.plants;
+      tuinSpaceFilter = '';
+      moestuinName = 'Moestuin';
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       children: [
-        _headerCard(context),
-        const SizedBox(height: 12),
-        _yearChips(context, seasons, selectedYear),
+        _HistoryFilterPanel(
+          seasons: seasons,
+          selectedYear: selectedYear,
+          moestuinOptions: showMoestuinFilter ? moestuinOptions : const [],
+          selectedMoestuinKey: _selectedTuinSpaceKey,
+          moestuinName: moestuinName,
+          expanded: _filterExpanded,
+          onToggle: () => setState(() => _filterExpanded = !_filterExpanded),
+          onYearSelected: (year) => setState(() {
+            _selectedYear = year;
+            _selectedTuinSpaceKey = null;
+            _filterExpanded = false;
+          }),
+          onMoestuinSelected: (key) => setState(() {
+            _selectedTuinSpaceKey = key;
+            _filterExpanded = false;
+          }),
+        ),
         const SizedBox(height: 14),
         _HistorySeasonView(
-          season: season,
+          year: season.year,
+          plants: filteredPlants,
+          moestuinName: moestuinName,
           profileStore: widget.profileStore,
           scanPrefs: widget.scanPrefs,
           gardenStore: widget.gardenStore,
@@ -119,51 +162,45 @@ class _MyGardenHistoryPageState extends State<MyGardenHistoryPage> {
     );
   }
 
-  Widget _headerCard(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const TuinHeading('Moestuin History', icon: Icons.history, fontSize: 20),
-          const SizedBox(height: 6),
-          Text(
-            'Bekijk geoogste en verwijderde planten per jaar. '
-            'Met de knop zet je dezelfde planten opnieuw in Mijn moestuin — '
-            'history blijft gewoon staan.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  height: 1.35,
-                ),
-          ),
-        ],
-      ),
-    );
+  List<_MoestuinHistoryOption> _moestuinOptionsFor(_HistorySeason season) {
+    final spaces = widget.gardenStore.historyFilterSpaces;
+    return spaces
+        .map((space) {
+          final count = season.plants
+              .where(
+                (item) => item.profile.archivedTuinSpaceId == space.id,
+              )
+              .length;
+          return _MoestuinHistoryOption(
+            key: space.id,
+            label: space.name,
+            plantCount: count,
+          );
+        })
+        .toList();
   }
 
-  Widget _yearChips(
-    BuildContext context,
-    List<_HistorySeason> seasons,
-    int selectedYear,
+  String? _resolveSelectedMoestuinKey(
+    _HistorySeason season,
+    List<_MoestuinHistoryOption> options,
+    String? current,
   ) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: seasons.map((season) {
-        return ChoiceChip(
-          label: Text('${season.year} (${season.plants.length})'),
-          selected: selectedYear == season.year,
-          showCheckmark: false,
-          onSelected: (_) => setState(() => _selectedYear = season.year),
-        );
-      }).toList(),
-    );
+    if (options.isEmpty) return null;
+    if (current != null && options.any((o) => o.key == current)) {
+      return current;
+    }
+    final withPlants = options.where((o) => o.plantCount > 0).toList();
+    if (withPlants.isNotEmpty) return withPlants.first.key;
+    return options.first.key;
+  }
+
+  List<_PlantHistoryItem> _plantsForMoestuinFilter(
+    _HistorySeason season,
+    String tuinSpaceKey,
+  ) {
+    return season.plants
+        .where((item) => item.profile.archivedTuinSpaceId == tuinSpaceKey)
+        .toList();
   }
 
   Widget _emptyCard(
@@ -204,9 +241,334 @@ class _MyGardenHistoryPageState extends State<MyGardenHistoryPage> {
   }
 }
 
+class _MoestuinHistoryOption {
+  const _MoestuinHistoryOption({
+    required this.key,
+    required this.label,
+    required this.plantCount,
+  });
+
+  final String key;
+  final String label;
+  final int plantCount;
+
+  _MoestuinHistoryOption copyWith({int? plantCount}) => _MoestuinHistoryOption(
+        key: key,
+        label: label,
+        plantCount: plantCount ?? this.plantCount,
+      );
+}
+
+/// Inklapbaar filter: jaar en moestuin als chips.
+class _HistoryFilterPanel extends StatelessWidget {
+  const _HistoryFilterPanel({
+    required this.seasons,
+    required this.selectedYear,
+    required this.moestuinOptions,
+    required this.selectedMoestuinKey,
+    required this.moestuinName,
+    required this.expanded,
+    required this.onToggle,
+    required this.onYearSelected,
+    required this.onMoestuinSelected,
+  });
+
+  final List<_HistorySeason> seasons;
+  final int selectedYear;
+  final List<_MoestuinHistoryOption> moestuinOptions;
+  final String? selectedMoestuinKey;
+  final String moestuinName;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final ValueChanged<int> onYearSelected;
+  final ValueChanged<String> onMoestuinSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = t.colorScheme;
+    final p = PlantSetupPalette.of(context);
+    final years = List<_HistorySeason>.from(seasons)
+      ..sort((a, b) => b.year.compareTo(a.year));
+    final selectedSeason = years.firstWhere((s) => s.year == selectedYear);
+    final plantCount = moestuinOptions
+        .where((o) => o.key == selectedMoestuinKey)
+        .map((o) => o.plantCount)
+        .firstOrNull;
+
+    return Material(
+      color: p.cardBackground,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: p.cardBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: onToggle,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(14, 14, 12, expanded ? 10 : 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.tune_rounded, size: 20, color: p.activeIcon),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Filter',
+                        style: t.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        expanded ? 'Sluiten' : 'Wijzigen',
+                        style: t.textTheme.labelMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      AnimatedRotation(
+                        turns: expanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.expand_more,
+                          size: 22,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (!expanded) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _HistoryActiveFilterChip(
+                          icon: Icons.calendar_month_outlined,
+                          label: '$selectedYear',
+                          detail: selectedSeason.plants.length == 1
+                              ? '1 plant'
+                              : '${selectedSeason.plants.length} planten',
+                        ),
+                        if (moestuinOptions.isNotEmpty)
+                          _HistoryActiveFilterChip(
+                            icon: Icons.yard_outlined,
+                            label: moestuinName,
+                            detail: plantCount == null
+                                ? null
+                                : plantCount == 1
+                                    ? '1 plant'
+                                    : '$plantCount planten',
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: expanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Divider(height: 1, color: p.cardBorder),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Jaar',
+                          style: t.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: p.sectionLabel,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: years.map((season) {
+                            final count = season.plants.length;
+                            return _HistoryFilterChoiceChip(
+                              label: '${season.year}',
+                              count: count,
+                              selected: season.year == selectedYear,
+                              onTap: () => onYearSelected(season.year),
+                            );
+                          }).toList(),
+                        ),
+                        if (moestuinOptions.isNotEmpty) ...[
+                          const SizedBox(height: 18),
+                          Text(
+                            'Moestuin',
+                            style: t.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: p.sectionLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: moestuinOptions.map((option) {
+                              return _HistoryFilterChoiceChip(
+                                label: option.label,
+                                count: option.plantCount,
+                                selected: option.key == selectedMoestuinKey,
+                                onTap: () => onMoestuinSelected(option.key),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Huidige keuze zichtbaar als filter dicht is.
+class _HistoryActiveFilterChip extends StatelessWidget {
+  const _HistoryActiveFilterChip({
+    required this.icon,
+    required this.label,
+    this.detail,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final p = PlantSetupPalette.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: p.chipSelectedBackground.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: p.chipSelectedBackground.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: p.activeIcon),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: t.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: p.chipSelectedForeground,
+                ),
+              ),
+              if (detail != null)
+                Text(
+                  detail!,
+                  style: t.textTheme.labelSmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryFilterChoiceChip extends StatelessWidget {
+  const _HistoryFilterChoiceChip({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final p = PlantSetupPalette.of(context);
+    final countLabel = count == 1 ? '1' : '$count';
+
+    return Material(
+      color: selected ? p.chipSelectedBackground : p.chipIdleBackground,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: t.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? p.chipSelectedForeground
+                      : p.chipIdleForeground,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? p.chipSelectedForeground.withValues(alpha: 0.18)
+                      : cs.surface.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  countLabel,
+                  style: t.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: selected
+                        ? p.chipSelectedForeground
+                        : p.chipIdleForeground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HistorySeasonView extends StatelessWidget {
   const _HistorySeasonView({
-    required this.season,
+    required this.year,
+    required this.plants,
+    required this.moestuinName,
     required this.profileStore,
     required this.scanPrefs,
     required this.gardenStore,
@@ -214,7 +576,9 @@ class _HistorySeasonView extends StatelessWidget {
     required this.onRestored,
   });
 
-  final _HistorySeason season;
+  final int year;
+  final List<_PlantHistoryItem> plants;
+  final String moestuinName;
   final GardenProfileStore profileStore;
   final GardenScanPrefsStore scanPrefs;
   final MyGardenStore gardenStore;
@@ -226,21 +590,32 @@ class _HistorySeasonView extends StatelessWidget {
     final t = Theme.of(context);
     final cs = t.colorScheme;
 
-    final moestuinBatches = profileStore.moestuinBatchesForYear(season.year);
-    final archivedProfiles =
-        season.plants.map((item) => item.profile).toList();
+    if (plants.isEmpty) {
+      return _emptyFilterCard(context, moestuinName: moestuinName, year: year);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ReuseInMoestuinCard(
-          plantCount: season.plants.length,
-          year: season.year,
+          plantCount: plants.length,
           onReuse: () async {
-            final ok = await confirmAndCopyHistorySeasonToGarden(
+            final rows = plants
+                .map(
+                  (item) => HistoryResumePlantRow(
+                    vegetable: item.vegetable,
+                    profile: item.profile,
+                    alreadyInGarden: gardenStore.contains(item.vegetable.id) ||
+                        profileStore.activeProfileFor(item.vegetable.id) !=
+                            null,
+                  ),
+                )
+                .toList();
+            final ok = await showResumePlantsFromHistorySheet(
               context,
-              year: season.year,
-              archivedProfiles: archivedProfiles,
+              plants: rows,
+              year: year,
+              moestuinName: moestuinName,
               gardenStore: gardenStore,
               profileStore: profileStore,
               repository: repository,
@@ -248,56 +623,6 @@ class _HistorySeasonView extends StatelessWidget {
             );
             if (ok) onRestored();
           },
-        ),
-        if (moestuinBatches.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          ...moestuinBatches.map(
-            (batch) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _RestoreMoestuinCard(
-                batch: batch,
-                onRestore: () async {
-                  final ok = await confirmAndRestoreMoestuinBatch(
-                    context,
-                    batch: batch,
-                    gardenStore: gardenStore,
-                    profileStore: profileStore,
-                    repository: repository,
-                    scanPrefs: scanPrefs,
-                  );
-                  if (ok) onRestored();
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-        ],
-        Row(
-          children: [
-            TuinHeading('${season.year}', fontSize: 22),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: cs.secondaryContainer.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Archief',
-                style: t.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSecondaryContainer,
-                ),
-              ),
-            ),
-            const Spacer(),
-            Text(
-              '${season.plants.length} plant${season.plants.length == 1 ? '' : 'en'}',
-              style: t.textTheme.labelMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-          ],
         ),
         const SizedBox(height: 12),
         GridView.builder(
@@ -309,9 +634,9 @@ class _HistorySeasonView extends StatelessWidget {
             mainAxisSpacing: 12,
             childAspectRatio: 0.58,
           ),
-          itemCount: season.plants.length,
+          itemCount: plants.length,
           itemBuilder: (context, index) {
-            final item = season.plants[index];
+            final item = plants[index];
             return _ArchivedPlantCard(
               vegetable: item.vegetable,
               profile: item.profile,
@@ -331,6 +656,30 @@ class _HistorySeasonView extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+
+  Widget _emptyFilterCard(
+    BuildContext context, {
+    required String moestuinName,
+    required int year,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        'Geen history voor $moestuinName in $year.\n'
+        'Kies een ander jaar of een andere moestuin.',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.35,
+            ),
+      ),
     );
   }
 }
@@ -458,129 +807,68 @@ class _PlantHistoryItem {
 class _ReuseInMoestuinCard extends StatelessWidget {
   const _ReuseInMoestuinCard({
     required this.plantCount,
-    required this.year,
     required this.onReuse,
   });
 
   final int plantCount;
-  final int year;
   final VoidCallback onReuse;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final cs = t.colorScheme;
+    final p = PlantSetupPalette.of(context);
 
     return Material(
-      color: cs.primaryContainer.withValues(alpha: 0.4),
+      color: p.chipSelectedBackground.withValues(alpha: 0.22),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: cs.primary.withValues(alpha: 0.25)),
+        side: BorderSide(color: p.chipSelectedBackground.withValues(alpha: 0.55)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.add_circle_outline, color: cs.primary, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Opnieuw in Mijn moestuin',
-                    style: t.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: plantCount == 0 ? null : onReuse,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: p.confirmButton,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              plantCount == 1
-                  ? 'Zet de plant van $year op je lijst — fris seizoen, history blijft.'
-                  : 'Zet alle $plantCount planten van $year op je lijst — fris seizoen, history blijft.',
-              style: t.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: plantCount == 0 ? null : onReuse,
-              icon: const Icon(Icons.yard_outlined, size: 20),
-              label: Text(
-                plantCount == 1
-                    ? 'Plant in moestuin zetten'
-                    : 'Alle planten in moestuin zetten',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RestoreMoestuinCard extends StatelessWidget {
-  const _RestoreMoestuinCard({
-    required this.batch,
-    required this.onRestore,
-  });
-
-  final MoestuinHistoryBatch batch;
-  final VoidCallback onRestore;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final cs = t.colorScheme;
-    final date =
-        '${batch.archivedAt.day}-${batch.archivedAt.month}-${batch.archivedAt.year}';
-
-    return Material(
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: cs.outlineVariant.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.archive_outlined, color: cs.primary, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Opgeslagen moestuin-snapshot',
-                    style: t.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                child: Icon(
+                  Icons.replay_rounded,
+                  color: p.confirmButtonForeground,
+                  size: 24,
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${batch.plantCount} plant${batch.plantCount == 1 ? '' : 'en'} · opgeslagen $date',
-              style: t.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-                height: 1.3,
               ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.tonalIcon(
-              onPressed: onRestore,
-              icon: const Icon(Icons.copy_all_outlined, size: 20),
-              label: const Text('Deze snapshot in moestuin zetten'),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Planten weer hervatten',
+                      style: t.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Deze planten weer gebruiken voor een frisse start',
+                      style: t.textTheme.labelSmall?.copyWith(
+                        color: p.activeIcon,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward, color: p.activeIcon),
+            ],
+          ),
         ),
       ),
     );

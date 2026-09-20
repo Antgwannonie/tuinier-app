@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tuinier_colors.dart';
+
 /// Zoekveld met wis-knop en optionele plagen-gids-knop.
 class ClearableSearchField extends StatelessWidget {
   const ClearableSearchField({
@@ -11,6 +13,8 @@ class ClearableSearchField extends StatelessWidget {
     this.borderRadius = 14,
     this.onPestGuide,
     this.showPestGuideButton = false,
+    this.focusNode,
+    this.onTap,
   });
 
   final TextEditingController controller;
@@ -20,6 +24,8 @@ class ClearableSearchField extends StatelessWidget {
   final double borderRadius;
   final VoidCallback? onPestGuide;
   final bool showPestGuideButton;
+  final FocusNode? focusNode;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +59,8 @@ class ClearableSearchField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
+      onTap: onTap,
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
@@ -67,8 +75,9 @@ class ClearableSearchField extends StatelessWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: BorderSide(
-            color: cs.outlineVariant.withValues(alpha: 0.5),
+          borderSide: const BorderSide(
+            color: TuinierColors.border,
+            width: 1.5,
           ),
         ),
         focusedBorder: OutlineInputBorder(

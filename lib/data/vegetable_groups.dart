@@ -5,7 +5,13 @@ const List<VegetableGroup> kVegetableGroups = [
   VegetableGroup(
     id: 'bieten',
     nameNl: 'Bieten',
-    vegetableIds: ['rode_biet'],
+    vegetableIds: [
+      'rode_biet',
+      'rode_biet_cilindrisch',
+      'gele_biet',
+      'witte_biet',
+      'chioggia_biet',
+    ],
   ),
   VegetableGroup(
     id: 'sla_soorten',
@@ -24,6 +30,7 @@ const List<VegetableGroup> kVegetableGroups = [
     nameNl: 'Bladgroenten',
     vegetableIds: [
       'spinazie',
+      'baby_spinazie',
       'rucola',
       'andijvie',
       'postelein',
@@ -31,6 +38,10 @@ const List<VegetableGroup> kVegetableGroups = [
       'tuinkers',
       'witlof',
       'veldsla',
+      'tuinmelde',
+      'waterkers',
+      'winterpostelein',
+      'bleekselderij_blad',
     ],
   ),
   VegetableGroup(
@@ -38,6 +49,9 @@ const List<VegetableGroup> kVegetableGroups = [
     nameNl: 'Wortelgroenten',
     vegetableIds: [
       'wortel',
+      'paarse_wortel',
+      'gele_wortel',
+      'witte_wortel',
       'radijs',
       'pastinaak',
       'winterpeen',
@@ -45,6 +59,15 @@ const List<VegetableGroup> kVegetableGroups = [
       'schorseneer',
       'rammenas',
       'zwarte_radijs',
+      'peterseliewortel',
+      'venkel',
+      'knolvenkel',
+      'knolselerij',
+      'knolraap',
+      'meiraap',
+      'raap',
+      'bleekselderij',
+      'stengelselderij',
     ],
   ),
   VegetableGroup(
@@ -57,20 +80,33 @@ const List<VegetableGroup> kVegetableGroups = [
       'pruimtomaat',
       'vleestomaat',
       'trostomaat',
+      'cocktailtomaat',
+      'balkontomaat',
+      'honingtomaat',
     ],
   ),
   VegetableGroup(
     id: 'paprika_peper',
     nameNl: 'Paprika & peper',
     vegetableIds: [
-      'paprika',
+      'rode_paprika',
+      'gele_paprika',
+      'oranje_paprika',
+      'puntpaprika',
+      'snack_paprika',
       'peper',
       'cayenne_peper',
       'chilipeper',
       'jalapeno',
       'habanero',
       'serrano_peper',
-      'gele_paprika',
+      'galapeno_peper',
+      'thaise_peper',
+      'poblano_peper',
+      'padron_peper',
+      'tabasco_peper',
+      'peperoncini',
+      'banana_peper',
     ],
   ),
   VegetableGroup(
@@ -81,9 +117,12 @@ const List<VegetableGroup> kVegetableGroups = [
       'komkommer',
       'cucamelon',
       'courgette',
+      'courgette_geel',
       'patisson',
+      'patisson_geel',
       'augurk',
       'pompoen',
+      'reuzen_pompoen',
       'pompoen_hokkaido',
       'pompoen_butternut',
       'okra',
@@ -97,10 +136,14 @@ const List<VegetableGroup> kVegetableGroups = [
     nameNl: 'Bonen & erwten',
     vegetableIds: [
       'bonen_sperzie',
+      'haricots_verts',
       'snijbonen',
       'doperwt',
+      'peultjes',
       'tuinboon',
       'sugarsnaps',
+      'witte_boon',
+      'kikkererwt',
       'pinda',
       'kapucijner',
       'bruine_boon',
@@ -108,6 +151,7 @@ const List<VegetableGroup> kVegetableGroups = [
       'sojaboon',
       'tuin_linzen',
       'snijboon_geel',
+      'erwtensoep_erwt',
     ],
   ),
   VegetableGroup(
@@ -117,11 +161,12 @@ const List<VegetableGroup> kVegetableGroups = [
       'bosui',
       'ui',
       'prei',
+      'winterprei',
+      'zomerprei',
       'knoflook',
       'sjalot',
       'rode_ui',
       'winterui',
-      'lente_ui',
       'knoflook_hardnekkig',
       'scheve_ui',
     ],
@@ -132,8 +177,8 @@ const List<VegetableGroup> kVegetableGroups = [
     vegetableIds: [
       'boerenkool',
       'broccoli',
+      'bimi',
       'koolrabi',
-      'raps_kool',
       'wittekool',
       'rodekool',
       'bloemkool',
@@ -145,6 +190,7 @@ const List<VegetableGroup> kVegetableGroups = [
       'palmekool',
       'romanesco',
       'chinese_kool',
+      'raapstelen',
       'raapkool',
       'rode_savooi',
       'bloemkool_paars',
@@ -156,7 +202,14 @@ const List<VegetableGroup> kVegetableGroups = [
   VegetableGroup(
     id: 'aardappel',
     nameNl: 'Aardappel',
-    vegetableIds: ['aardappel', 'zoete_aardappel', 'aardpeer', 'topinambur'],
+    vegetableIds: [
+      'aardappel',
+      'vroege_aardappel',
+      'vastkokende_aardappel',
+      'kruimige_aardappel',
+      'zoete_aardappel',
+      'aardpeer',
+    ],
   ),
   VegetableGroup(
     id: 'aubergine',
@@ -182,8 +235,9 @@ const List<VegetableGroup> kVegetableGroups = [
       'groene_asperge',
       'witte_asperge',
       'aardpeer',
-      'topinambur',
       'zuring',
+      'artisjok',
+      'kardoen',
     ],
   ),
   VegetableGroup(
@@ -215,6 +269,7 @@ const List<VegetableGroup> kVegetableGroups = [
       'walnoot',
       'hazelnoot',
       'kastanje_boom',
+      'kaki',
     ],
   ),
   VegetableGroup(
@@ -227,15 +282,11 @@ const List<VegetableGroup> kVegetableGroups = [
       'rode_bes',
       'zwarte_bes',
       'physalis',
-      'kruisbess',
-      'aalbes',
       'jostabes',
       'vlierbes',
       'duindoorn',
       'veenbes',
-      'framboos_zomer',
-      'braam_zonder_doorn',
-      'rode_bes_grootvrucht',
+      'blauwe_regen_bes',
     ],
   ),
   VegetableGroup(
@@ -276,14 +327,17 @@ const List<VegetableGroup> kVegetableGroups = [
       'bijenmengsel',
       'lindebloesem',
       'tagetes_patula',
-      'phacelia_tanacetifolia',
       'alyssum_sneeuw',
       'calendula_officinalis',
+      'zinnia',
+      'lupine_groenbemester',
+      'stiefmoedje',
+      'ringelbloem',
+      'lavendel',
       'ui_bloei',
       'look_bloei',
       'dille_bloei',
       'koriander_bloei',
-      'lavendel_bloei',
       'salie_bloei',
       'tijm_bloei',
       'basilicum_bloei',
@@ -316,6 +370,8 @@ const List<VegetableGroup> kVegetableGroups = [
       'estragon',
       'kerrieblad',
       'tuinkruid',
+      'gember',
+      'citroengras',
     ],
   ),
   VegetableGroup(
@@ -331,6 +387,13 @@ const List<VegetableGroup> kVegetableGroups = [
       'lions_mane',
       'enoki',
       'shimeji',
+      'koningsoesterzwam',
+      'maitake',
+      'reishi',
+      'zomerpaddestoel',
+      'nameko',
+      'wijnrood_stropharia',
+      'blauwe_ridderzwam',
     ],
   ),
   VegetableGroup(
@@ -344,6 +407,7 @@ const List<VegetableGroup> kVegetableGroups = [
       'paksoi_jong',
       'chinese_kool',
       'tauge',
+      'gember',
     ],
   ),
 ];
@@ -351,6 +415,13 @@ const List<VegetableGroup> kVegetableGroups = [
 VegetableGroup? vegetableGroupById(String id) {
   for (final g in kVegetableGroups) {
     if (g.id == id) return g;
+  }
+  return null;
+}
+
+VegetableGroup? vegetableGroupContaining(String vegetableId) {
+  for (final g in kVegetableGroups) {
+    if (g.vegetableIds.contains(vegetableId)) return g;
   }
   return null;
 }

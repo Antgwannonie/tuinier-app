@@ -132,7 +132,7 @@ const List<Vegetable> kMyGardenPlants = [
     summary: 'Winterpeen; direct zaaien, niet verplanten.',
     sowingIndoors: 'Niet aanbevolen.',
     sowingOutdoors: 'Zaaien/planten vanaf 18 mei.',
-    transplant: 'Niet verplanten — wortel stolt.',
+    transplant: 'Niet verplanten, wortel stolt.',
     harvest: 'Oogst juli–augustus; ±70–90 dagen na start.',
     spacingCm: 5,
     rowSpacingCm: 25,
@@ -301,13 +301,13 @@ const List<Vegetable> kMyGardenPlants = [
     keywords: ['tomaat', 'solanum', 'vleestomaat'],
   ),
   Vegetable(
-    id: 'paprika',
-    nameNl: 'Paprika',
+    id: 'rode_paprika',
+    nameNl: 'Rode paprika',
     nameLatin: 'Capsicum annuum',
     family: 'Vruchtgroente (nachtschade)',
     growthCategory: 'Lang producerende zomerplanten',
     cropDuration: 'Lang seizoen; oogst augustus–oktober',
-    summary: 'Warmteminnend; start onder glas in koude regio.',
+    summary: 'Rode zoete paprika; warmteminnend, start onder glas in koude regio.',
     sowingIndoors: 'Februari–maart, veel licht.',
     sowingOutdoors: 'Planten vanaf 18 mei.',
     transplant: 'Mei–juni; niet te vroeg buiten bij kou.',
@@ -320,7 +320,7 @@ const List<Vegetable> kMyGardenPlants = [
     care: 'Steunen bij zware vruchten.',
     harvestTips: 'Knippen met deel van steel; vol kleur.',
     commonIssues: 'Trips; bladluis; meeldauw.',
-    keywords: ['paprika', 'capsicum'],
+    keywords: ['rode paprika', 'paprika', 'rood', 'capsicum', 'zoet'],
   ),
   Vegetable(
     id: 'peper',
@@ -385,12 +385,12 @@ const List<Vegetable> kMyGardenPlants = [
     soilAndFood: 'Lichte humusrijke grond; niet te zuur.',
     care: 'Runners wegknippen voor energie naar vruchten.',
     harvestTips: 'Plukken met kroontje; oogst in de ochtend.',
-    commonIssues: 'Grijseschimmel; vogels — net gebruiken.',
+    commonIssues: 'Grijseschimmel; vogels, net gebruiken.',
     keywords: ['aardbei', 'fragaria', 'everbearing'],
   ),
 ];
 
-/// ids uit jouw plan — niet dubbel in de algemene lijst.
+/// ids uit jouw plan, niet dubbel in de algemene lijst.
 const Set<String> kMyGardenPlantIds = {
   'radijs',
   'rucola',
@@ -405,7 +405,7 @@ const Set<String> kMyGardenPlantIds = {
   'snackkomkommer',
   'snoeptomaat',
   'tomaat',
-  'paprika',
+  'rode_paprika',
   'peper',
   'aubergine',
   'aardbei',

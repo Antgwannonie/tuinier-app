@@ -32,29 +32,16 @@ class _PlantScanTimelineState extends State<PlantScanTimeline> {
   final Set<int> _openScanKeys = {};
 
   @override
-  void initState() {
-    super.initState();
-    _openLatestIfNeeded(plantScanEntries(widget.profile));
-  }
-
-  @override
   void didUpdateWidget(PlantScanTimeline oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.profile.vegetableId != widget.profile.vegetableId) {
       _openScanKeys.clear();
-      _openLatestIfNeeded(plantScanEntries(_profile));
     }
   }
 
   GardenPlantProfile get _profile =>
       widget.profileStore.profileFor(widget.profile.vegetableId) ??
       widget.profile;
-
-  void _openLatestIfNeeded(List<PlantScanEntry> scans) {
-    if (_openScanKeys.isEmpty && scans.isNotEmpty) {
-      _openScanKeys.add(_scanKey(scans.last));
-    }
-  }
 
   void _syncOpenKeys(List<PlantScanEntry> scans) {
     final valid = scans.map(_scanKey).toSet();
@@ -107,9 +94,6 @@ class _PlantScanTimelineState extends State<PlantScanTimeline> {
     setState(() {
       _openScanKeys.remove(key);
       _syncOpenKeys(scans);
-      if (_openScanKeys.isEmpty && scans.isNotEmpty) {
-        _openScanKeys.add(_scanKey(scans.last));
-      }
     });
   }
 
@@ -301,7 +285,9 @@ class _ScanTimelineTile extends StatelessWidget {
           if (isOpen)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-              child: PlantScanResultCard(analysis: a),
+              child: PlantScanResultCard(
+                analysis: a,
+              ),
             ),
         ],
       ),

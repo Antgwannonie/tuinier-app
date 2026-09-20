@@ -1,5 +1,6 @@
 import '../models/garden_plant_profile.dart';
 import '../models/plant_ai_analysis.dart';
+import 'crop_bloom_countdown.dart';
 import 'plant_scan_photo_store.dart';
 
 /// Eén scan met optionele foto.
@@ -73,8 +74,18 @@ List<String> followUpScanLines(
     lines.add('Fase: ${current.phaseLabel}');
   }
 
-  if (previous.daysUntilHarvest != current.daysUntilHarvest) {
-    if (current.daysUntilHarvest != null) {
+  final prevCountdown = cropCountdownDaysAtScan(previous, null);
+  final currCountdown = cropCountdownDaysAtScan(current, null);
+  final prevBloomDays = previous.daysUntilBloom;
+  final currBloomDays = current.daysUntilBloom;
+
+  if (prevCountdown != currCountdown ||
+      prevBloomDays != currBloomDays ||
+      previous.daysUntilHarvest != current.daysUntilHarvest) {
+    final changeLine = formatCropCountdownChangeLine(current);
+    if (changeLine.isNotEmpty) {
+      lines.add(changeLine);
+    } else if (current.daysUntilHarvest != null) {
       lines.add(
         current.phase == PlantAiPhase.ripe
             ? 'Klaar om te oogsten'
@@ -84,6 +95,8 @@ List<String> followUpScanLines(
   } else if (current.daysUntilHarvest != null &&
       current.phase == PlantAiPhase.ripe) {
     lines.add('Klaar om te oogsten');
+  } else if (analysisIsInBloom(current)) {
+    lines.add('Nu in bloei');
   }
 
   if (previous.harvestWindowLabel != current.harvestWindowLabel &&
@@ -125,6 +138,26 @@ List<String> _resolvedPhotoPaths(
   return profile.scanPhotoPaths
       .where(PlantScanPhotoStore.exists)
       .toList();
+}
+
+/// Profiel leegmaken voor een nieuwe zaai-/plantronde (geen oude oogst/scans).
+GardenPlantProfile resetProfileScanStateForNewPlanting(
+  GardenPlantProfile profile,
+) {
+  return profile.copyWith(
+    clearAnalysis: true,
+    scanHistory: const [],
+    scanPhotoPaths: const [],
+    clearLastScanPhoto: true,
+    clearScanFingerprint: true,
+    clearHarvest: true,
+    clearNextScan: true,
+    clearPinnedMoestuinAction: true,
+    plantHealthAcknowledged: false,
+    warningsDismissedFromBell: false,
+    seasonBeyondCalendar: false,
+    awaitingDeathConfirmation: false,
+  );
 }
 
 /// Verwijdert één scan (en bijbehorende foto) uit het profiel.

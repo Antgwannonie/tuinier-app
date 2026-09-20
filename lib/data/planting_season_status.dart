@@ -197,6 +197,116 @@ int _typePriority(GardenTaskType type) {
   }
 }
 
+int? _daysUntilNextPlantingWindow(
+  List<_PlantWindow> windows,
+  DateTime today,
+) {
+  if (windows.isEmpty) return null;
+
+  for (final w in windows) {
+    if (!today.isBefore(w.start) && !today.isAfter(w.end)) {
+      return 0;
+    }
+  }
+
+  _PlantWindow? nextWindow;
+  for (final w in windows) {
+    if (!w.start.isAfter(today)) continue;
+    if (nextWindow == null || w.start.isBefore(nextWindow.start)) {
+      nextWindow = w;
+    }
+  }
+  if (nextWindow == null) return null;
+  return nextWindow.start.difference(today).inDays;
+}
+
+/// Dagen tot het eerstvolgende zaai-/plantvenster (0 = venster is nu open).
+int? daysUntilNextPlantingSeason(
+  String vegetableId, {
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  final windows = _plantingWindowsForYears(
+    vegetableId,
+    today.year - 1,
+    today.year + 1,
+    vegetable: vegetable,
+  );
+  return _daysUntilNextPlantingWindow(windows, today);
+}
+
+/// Dagen tot voorzaaien/buiten zaaien — niet buiten planten (transplant).
+int? daysUntilNextInitialPlantSeason(
+  String vegetableId, {
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  const initialTypes = {
+    GardenTaskType.preSow,
+    GardenTaskType.sowOutdoors,
+  };
+  final windows = _plantingWindowsForYears(
+    vegetableId,
+    today.year - 1,
+    today.year + 1,
+    vegetable: vegetable,
+  ).where((w) => initialTypes.contains(w.type)).toList();
+  return _daysUntilNextPlantingWindow(windows, today);
+}
+
+/// Zaai-/voorzaai-status voor nog niet gestarte moestuinplanten (stap 1).
+PlantingSeasonStatus plantingSeasonStatusForSowStart(
+  String vegetableId, {
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  return _statusForTypes(
+    vegetableId,
+    today,
+    const {GardenTaskType.preSow, GardenTaskType.sowOutdoors},
+    vegetable: vegetable,
+  );
+}
+
+/// Resterende dagen in het huidige voorzaai-/buiten-zaai-venster.
+int? plantingSowSeasonDaysLeftInWindow(
+  String vegetableId, {
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final status = plantingSeasonStatusForSowStart(
+    vegetableId,
+    reference: reference,
+    vegetable: vegetable,
+  );
+  return switch (status.phase) {
+    PlantingSeasonPhase.daysLeft => status.days,
+    PlantingSeasonPhase.activeNow => 0,
+    _ => null,
+  };
+}
+
+/// Resterende dagen in het huidige zaai-/plantvenster (`null` = niet in venster).
+int? plantingSeasonDaysLeftInWindow(
+  String vegetableId, {
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final status = plantingSeasonStatusFor(
+    vegetableId,
+    reference: reference,
+    vegetable: vegetable,
+  );
+  return switch (status.phase) {
+    PlantingSeasonPhase.daysLeft => status.days,
+    PlantingSeasonPhase.activeNow => 0,
+    _ => null,
+  };
+}
+
 /// Bepaalt zaai-/plantvenster voor de planten-atlas (zoek-tab).
 PlantingSeasonStatus plantingSeasonStatusFor(
   String vegetableId, {
@@ -453,7 +563,7 @@ PlantingSeasonAdvice plantingSeasonAdviceFor(
       (outdoorWaiting || outdoorEnded) &&
       !indoorActive) {
     lines.add(
-      'Binnen of kas: ${vegetable.sowingIndoors} — buiten is het seizoen '
+      'Binnen of kas: ${vegetable.sowingIndoors}. Buiten is het seizoen '
       '${outdoorEnded ? "voorbij" : "nog niet begonnen"}.',
     );
   }
@@ -473,6 +583,126 @@ PlantingSeasonAdvice plantingSeasonAdviceFor(
     detailLines: lines,
     isSeasonEnded: short.isSeasonEnded,
   );
+}
+
+/// Zaai-/plantvenster voor UI (wizard, detail).
+class PlantingWindowRange {
+  const PlantingWindowRange({
+    required this.start,
+    required this.end,
+    required this.type,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final GardenTaskType type;
+}
+
+List<PlantingWindowRange> plantingWindowRangesFor(
+  String vegetableId, {
+  required int yearFrom,
+  required int yearTo,
+  Set<GardenTaskType>? types,
+  Vegetable? vegetable,
+}) {
+  final raw = _plantingWindowsForYears(
+    vegetableId,
+    yearFrom,
+    yearTo,
+    vegetable: vegetable,
+  );
+  final filtered =
+      types == null ? raw : raw.where((w) => types.contains(w.type));
+  return [
+    for (final w in filtered)
+      PlantingWindowRange(start: w.start, end: w.end, type: w.type),
+  ];
+}
+
+PlantingSeasonStatus plantingSeasonStatusForTaskTypes(
+  String vegetableId, {
+  required Set<GardenTaskType> types,
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  return _statusForTypes(
+    vegetableId,
+    today,
+    types,
+    vegetable: vegetable,
+  );
+}
+
+PlantingWindowRange? nextRelevantPlantingWindow(
+  String vegetableId, {
+  required Set<GardenTaskType> types,
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  final windows = plantingWindowRangesFor(
+    vegetableId,
+    yearFrom: today.year - 1,
+    yearTo: today.year + 2,
+    types: types,
+    vegetable: vegetable,
+  );
+
+  for (final w in windows) {
+    if (!today.isBefore(w.start) && !today.isAfter(w.end)) return w;
+  }
+
+  PlantingWindowRange? next;
+  for (final w in windows) {
+    if (!w.start.isAfter(today)) continue;
+    if (next == null || w.start.isBefore(next.start)) next = w;
+  }
+  return next ?? (windows.isNotEmpty ? windows.first : null);
+}
+
+DateTime plannedSeasonStartDate(
+  String vegetableId, {
+  required Set<GardenTaskType> types,
+  DateTime? reference,
+  Vegetable? vegetable,
+}) {
+  final today = _dateOnly(reference ?? DateTime.now());
+  final window = nextRelevantPlantingWindow(
+    vegetableId,
+    types: types,
+    reference: today,
+    vegetable: vegetable,
+  );
+  if (window == null) return today;
+  if (!today.isBefore(window.start) && !today.isAfter(window.end)) return today;
+  if (window.start.isAfter(today)) return window.start;
+  return today;
+}
+
+String formatPlantingWindowNl(DateTime start, DateTime end) {
+  const months = [
+    '',
+    'januari',
+    'februari',
+    'maart',
+    'april',
+    'mei',
+    'juni',
+    'juli',
+    'augustus',
+    'september',
+    'oktober',
+    'november',
+    'december',
+  ];
+  if (start.year == end.year && start.month == end.month) {
+    return '${months[start.month]} ${start.year}';
+  }
+  if (start.year == end.year) {
+    return '${months[start.month]} – ${months[end.month]} ${start.year}';
+  }
+  return '${months[start.month]} ${start.year} – ${months[end.month]} ${end.year}';
 }
 
 /// Tropisch/kas-gewas: binnen kan eerder dan buiten/kas in de kalender.

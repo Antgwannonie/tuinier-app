@@ -34,20 +34,24 @@ class PlantSetupSheetHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.badge,
+    this.centered = false,
   });
 
   final String title;
   final String? subtitle;
   final String? badge;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final cs = t.colorScheme;
     final p = PlantSetupPalette.of(context);
+    final align = centered ? CrossAxisAlignment.center : CrossAxisAlignment.start;
+    final textAlign = centered ? TextAlign.center : TextAlign.start;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: align,
       children: [
         if (badge != null) ...[
           Container(
@@ -66,26 +70,39 @@ class PlantSetupSheetHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
         ],
-        Text(
-          title,
-          style: t.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            height: 1.15,
+        _headerLine(
+          centered: centered,
+          child: Text(
+            title,
+            textAlign: textAlign,
+            style: t.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+            ),
           ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 6),
-          Text(
-            subtitle!,
-            style: t.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-              height: 1.35,
+          _headerLine(
+            centered: centered,
+            child: Text(
+              subtitle!,
+              textAlign: textAlign,
+              style: t.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.35,
+              ),
             ),
           ),
         ],
       ],
     );
   }
+}
+
+Widget _headerLine({required bool centered, required Widget child}) {
+  if (!centered) return child;
+  return SizedBox(width: double.infinity, child: child);
 }
 
 class PlantSetupSurfaceCard extends StatelessWidget {
@@ -114,9 +131,10 @@ class PlantSetupSurfaceCard extends StatelessWidget {
 }
 
 class PlantSetupSectionLabel extends StatelessWidget {
-  const PlantSetupSectionLabel(this.text, {super.key});
+  const PlantSetupSectionLabel(this.text, {super.key, this.style});
 
   final String text;
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
@@ -125,10 +143,11 @@ class PlantSetupSectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 2, bottom: 8),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: p.sectionLabel,
-            ),
+        style: style ??
+            Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: p.sectionLabel,
+                ),
       ),
     );
   }
@@ -172,8 +191,10 @@ class PlantSetupPlantedSwitch extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value
-                      ? 'Je plant of zaait nu — datum en plek tellen mee.'
-                      : 'Alleen op je lijst; later “geplant” op Start.',
+                      ? 'Je plant of zaait nu, datum en plek tellen mee.'
+                      : 'Je markeert deze groente als gepland voor het komende '
+                          'zaai- of plantseizoen. Verschijnt in Taken zodra je '
+                          'kunt zaaien of planten.',
                   style: t.textTheme.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.3,
@@ -199,15 +220,17 @@ class PlantSetupDateCard extends StatelessWidget {
     required this.dateLabel,
     required this.plantedAt,
     required this.dateUnknown,
-    required this.onDateUnknownChanged,
     required this.onPickDate,
+    this.onDateUnknownChanged,
+    this.showDateUnknownToggle = true,
   });
 
   final String dateLabel;
   final DateTime plantedAt;
   final bool dateUnknown;
-  final ValueChanged<bool> onDateUnknownChanged;
+  final ValueChanged<bool>? onDateUnknownChanged;
   final VoidCallback onPickDate;
+  final bool showDateUnknownToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -288,29 +311,31 @@ class PlantSetupDateCard extends StatelessWidget {
               ),
             ),
           ),
-          Divider(height: 1, color: p.cardBorder),
-          SwitchListTile(
-            contentPadding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-            activeThumbColor: p.confirmButton,
-            activeTrackColor: p.dateIconBackground,
-            title: Text(
-              'Datum niet meer bekend',
-              style: t.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+          if (showDateUnknownToggle && onDateUnknownChanged != null) ...[
+            Divider(height: 1, color: p.cardBorder),
+            SwitchListTile(
+              contentPadding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+              activeThumbColor: p.confirmButton,
+              activeTrackColor: p.dateIconBackground,
+              title: Text(
+                'Datum niet meer bekend',
+                style: t.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            subtitle: Text(
-              dateUnknown
-                  ? 'Geen seizoenswaarschuwing op deze datum.'
-                  : 'Handig als je al langer geleden gezaaid hebt.',
-              style: t.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-                height: 1.3,
+              subtitle: Text(
+                dateUnknown
+                    ? 'Geen seizoenswaarschuwing op deze datum.'
+                    : 'Handig als je al langer geleden gezaaid hebt.',
+                style: t.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.3,
+                ),
               ),
+              value: dateUnknown,
+              onChanged: onDateUnknownChanged,
             ),
-            value: dateUnknown,
-            onChanged: (v) => onDateUnknownChanged(v),
-          ),
+          ],
         ],
       ),
     );
@@ -423,11 +448,24 @@ class PlantSetupConfirmButton extends StatelessWidget {
 Future<DateTime?> pickPlantSetupDate(
   BuildContext context, {
   required DateTime initial,
+  bool plannedForSeason = false,
 }) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  if (plannedForSeason) {
+    return showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(today) ? today : initial,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
+      helpText: 'Gepland voor',
+    );
+  }
   return showDatePicker(
     context: context,
-    initialDate: initial,
-    firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
-    lastDate: DateTime.now(),
+    initialDate: initial.isAfter(today) ? today : initial,
+    firstDate: today.subtract(const Duration(days: 365 * 3)),
+    lastDate: today,
+    helpText: 'Gezaaid / geplant op',
   );
 }

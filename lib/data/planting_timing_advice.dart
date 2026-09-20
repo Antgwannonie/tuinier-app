@@ -33,12 +33,14 @@ class PlantingTimingAssessment {
       plantWindowLabel != null;
 }
 
-/// Scan zegt dat oogst dit seizoen nog kan — geen seizoenswaarschuwing-icoon.
+/// Scan zegt dat oogst dit seizoen nog kan, geen seizoenswaarschuwing-icoon.
 bool aiReassuresHarvestThisSeason(GardenPlantProfile? profile) {
   if (profile == null || profile.lastAnalysis == null) return false;
+  if (profile.seasonBeyondCalendar) return true;
   final ai = profile.lastAnalysis!;
   if (ai.hasCropMismatch) return false;
-  return ai.harvestStillPossibleThisSeason == true;
+  return ai.harvestStillPossibleThisSeason == true ||
+      ai.insight?.moreHarvestExpectedThisSeason == true;
 }
 
 List<String> harvestReassuranceLines(GardenPlantProfile profile) {
@@ -211,6 +213,11 @@ bool isTropicalOrIndoorCrop(String vegetableId) {
     'shiitake',
     'oesterzwam',
     'kastanjechampignon',
+    'koningsoesterzwam',
+    'maitake',
+    'reishi',
+    'zomerpaddestoel',
+    'nameko',
   };
   return ids.contains(vegetableId);
 }
@@ -262,7 +269,7 @@ List<String> _aiSeasonSupplementLines(GardenPlantProfile profile) {
   final ai = profile.lastAnalysis;
   if (ai == null) {
     return const [
-      'Tip: maak een plantscan — aan de hand van de grootte op de foto '
+      'Tip: maak een plantscan, aan de hand van de grootte op de foto '
           'schattent we of oogst dit seizoen nog haalbaar is.',
     ];
   }
@@ -277,7 +284,7 @@ List<String> _aiSeasonSupplementLines(GardenPlantProfile profile) {
     return const [];
   } else if (possible == false) {
     lines.add(
-      'Scan: voor deze grootte en het seizoen is normale oogst onwaarschijnlijk — '
+      'Scan: voor deze grootte en het seizoen is normale oogst onwaarschijnlijk, '
       'mogelijk laat bloeier of weinig/geen vruchten.',
     );
   }
@@ -325,9 +332,9 @@ PlantingTimingAssessment seasonDisplayFor({
     );
   }
 
-  final dateWarn = datePhotoWarningsFor(profile);
   final seasonExtra = _aiSeasonSupplementLines(profile);
-  final warnings = [...base.warningLines, ...dateWarn, ...seasonExtra];
+  // Datum/foto-mismatch: alleen meldingen-tab (activeDatePhotoWarningsFor), niet Home.
+  final warnings = [...base.warningLines, ...seasonExtra];
 
   if (warnings.isEmpty && !base.hasWarnings) return base;
 
@@ -354,7 +361,7 @@ PlantingTimingAssessment assessPlantingTiming({
     return PlantingTimingAssessment(
       status: PlantingTimingStatus.unknownDate,
       infoLines: [
-        'Zaaidatum onbekend — we beoordelen groei vooral via je plantscans.',
+        'Zaaidatum onbekend, we beoordelen groei vooral via je plantscans.',
         profilePlantedDateLabel(profile),
         ...photoAgeInfoForUnknownDate(profile),
         if (plantLabel != null) 'Richtlijn $plantLabel',
@@ -372,7 +379,7 @@ PlantingTimingAssessment assessPlantingTiming({
     return PlantingTimingAssessment(
       status: PlantingTimingStatus.noCalendar,
       infoLines: [
-        'Geen kalenderdata voor dit gewas — gebruik de teeltteksten als richtlijn.',
+        'Geen kalenderdata voor dit gewas, gebruik de teeltteksten als richtlijn.',
         if (vegetable.sowingOutdoors.isNotEmpty)
           'Zaaien buiten: ${vegetable.sowingOutdoors}',
         if (vegetable.harvest.isNotEmpty) 'Oogst: ${vegetable.harvest}',
@@ -441,7 +448,7 @@ PlantingTimingAssessment assessPlantingTiming({
     );
   } else if (slightlyLate) {
     warnings.add(
-      'Je zit net na het plantseizoen — verminderde kans op oogst, vooral buiten.',
+      'Je zit net na het plantseizoen, verminderde kans op oogst, vooral buiten.',
     );
   }
 

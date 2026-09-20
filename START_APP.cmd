@@ -8,6 +8,9 @@ if not exist "pubspec.yaml" (
   pause
   exit /b 1
 )
-call flutter clean
+echo Start app (zonder flutter clean — assets blijven gebundeld).
+echo Voor schone rebuild: flutter clean ^&^& flutter pub get ^&^& flutter run
+echo.
+call flutter pub get
 call flutter run
 pause

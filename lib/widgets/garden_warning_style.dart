@@ -1,49 +1,44 @@
 import 'package:flutter/material.dart';
 
-/// Gedeelde stijl voor tuin-meldingen (licht geel, geen fel rood).
+import '../theme/tuinier_colors.dart';
+
+/// Meldingen — design system statuskleuren.
 class GardenWarningStyle {
   static Color dangerBackground(ColorScheme cs) => Color.alphaBlend(
-        cs.error.withValues(alpha: 0.14),
-        cs.surfaceContainerLow,
+        TuinierColors.error.withValues(alpha: 0.1),
+        TuinierColors.card,
       );
 
-  static Color dangerForeground(ColorScheme cs) => cs.onErrorContainer;
+  static Color dangerForeground(ColorScheme cs) => TuinierColors.error;
 
-  static Color dangerIcon(ColorScheme cs) => cs.error;
+  static Color dangerIcon(ColorScheme cs) => TuinierColors.error;
 
   static Color background(ColorScheme cs) => Color.alphaBlend(
-        Colors.amber.withValues(alpha: 0.18),
-        cs.surfaceContainerLow,
+        TuinierColors.warning.withValues(alpha: 0.15),
+        TuinierColors.card,
       );
 
-  static Color foreground(ColorScheme cs) =>
-      Colors.amber.shade900;
+  static Color foreground(ColorScheme cs) => TuinierColors.warning;
 
-  static Color icon(ColorScheme cs) => Color.lerp(
-        Colors.amber.shade700,
-        cs.primary,
-        0.15,
-      )!;
+  static Color icon(ColorScheme cs) => TuinierColors.warning;
 
   static Color infoBackground(ColorScheme cs) => Color.alphaBlend(
-        Colors.green.withValues(alpha: 0.14),
-        cs.surfaceContainerLow,
+        TuinierColors.success.withValues(alpha: 0.1),
+        TuinierColors.card,
       );
 
-  static Color infoForeground(ColorScheme cs) => Colors.green.shade900;
+  static Color infoForeground(ColorScheme cs) => TuinierColors.headerDark;
 
-  static Color infoIcon(ColorScheme cs) => Colors.green.shade700;
+  static Color infoIcon(ColorScheme cs) => TuinierColors.success;
 
-  static Color badgeSolid(ColorScheme cs) => Colors.amber.shade700;
+  static Color badgeSolid(ColorScheme cs) => TuinierColors.error;
 
   static Color badgeBackground(ColorScheme cs) => Color.alphaBlend(
-        Colors.amber.withValues(alpha: 0.45),
-        cs.surfaceContainerHighest,
+        TuinierColors.warning.withValues(alpha: 0.25),
+        TuinierColors.background,
       );
 
-  /// Grijs accent voor milde scan-informatie.
-  static Color neutralBackground(ColorScheme cs) =>
-      cs.surfaceContainerHighest.withValues(alpha: 0.9);
+  static Color neutralBackground(ColorScheme cs) => TuinierColors.background;
 
-  static Color neutralForeground(ColorScheme cs) => cs.onSurfaceVariant;
+  static Color neutralForeground(ColorScheme cs) => TuinierColors.textSecondary;
 }

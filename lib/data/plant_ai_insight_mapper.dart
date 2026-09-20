@@ -1,5 +1,7 @@
 import '../models/plant_ai_analysis.dart';
 import '../models/plant_ai_insight_report.dart';
+import 'moestuin_task_catalog.dart';
+import 'scan_assessment_sync.dart';
 
 const _pestCatalog = [
   ('bladluis', 'Bladluis'),
@@ -8,6 +10,7 @@ const _pestCatalog = [
   ('trips', 'Trips'),
   ('rups', 'Rupsen'),
   ('kever', 'Kevers'),
+  ('slak', 'Slakken'),
 ];
 
 const _diseaseCatalog = [
@@ -41,10 +44,20 @@ PlantAiInsightReport insightForOrnamentalBloom(PlantAiInsightReport insight) {
   final tasks = insight.coachTasks
       .where((t) => t.kind.toLowerCase() != 'harvest')
       .toList();
+  final assessments = insight.scanAssessments.where((a) {
+    final key = semanticTopicKeyForTaskId(a.taskId);
+    if (key == 'harvest') return false;
+    return !a.taskId.toLowerCase().contains('oogst');
+  }).toList();
+  final recommended = insight.recommendedActions
+      .where((a) => !a.title.toLowerCase().contains('oogst'))
+      .toList();
   return PlantAiInsightReport(
     summary: insight.summary,
     healthScore: insight.healthScore,
     growthScore: insight.growthScore,
+    harvestChancePercent: insight.harvestChancePercent,
+    harvestChanceNote: insight.harvestChanceNote ?? insight.floweringNote,
     riskLevel: insight.riskLevel,
     priority: insight.priority,
     pests: insight.pests,
@@ -69,45 +82,82 @@ PlantAiInsightReport insightForOrnamentalBloom(PlantAiInsightReport insight) {
     sunlightLevel: insight.sunlightLevel,
     sunlightAdvice: insight.sunlightAdvice,
     problems: insight.problems,
-    recommendedActions: insight.recommendedActions,
+    recommendedActions: recommended,
     coachTasks: tasks,
+    moduleConfidence: insight.moduleConfidence,
+    scanComparisonBullets: insight.scanComparisonBullets,
+    leafAnalysisNote: insight.leafAnalysisNote,
+    strengths: insight.strengths,
+    attentionPoints: insight.attentionPoints,
+    environmentNote: insight.environmentNote,
+    weekFocus: insight.weekFocus,
+    outlookBullets: insight.outlookBullets,
+    coachWeekPlan: insight.coachWeekPlan,
+    didYouKnow: insight.didYouKnow,
+    fruitSizeVsMarket: insight.fruitSizeVsMarket,
+    visualObservations: insight.visualObservations,
+    scanAssessments: assessments,
   );
 }
 
-/// Vult ontbrekende pest/disease/nutrient rijen aan voor consistente UI.
-PlantAiInsightReport normalizeInsight(PlantAiInsightReport insight) {
-  final pests = _mergeIssues(insight.pests, _pestCatalog);
-  final diseases = _mergeIssues(insight.diseases, _diseaseCatalog);
-  final nutrients = _mergeNutrients(insight.nutrients);
+/// Vult ontbrekende pest/disease/nutrient rijen aan + sync scanAssessments.
+PlantAiInsightReport normalizeInsight(
+  PlantAiInsightReport insight, {
+  PlantAiPhase? phase,
+}) {
+  final synced = syncScanAssessments(insight, phase: phase);
+  final pests = _mergeIssues(synced.pests, _pestCatalog);
+  final diseases = _mergeIssues(synced.diseases, _diseaseCatalog);
+  final nutrients = _mergeNutrients(synced.nutrients);
   return PlantAiInsightReport(
-    summary: insight.summary,
-    healthScore: insight.healthScore,
-    growthScore: insight.growthScore,
-    riskLevel: insight.riskLevel,
-    priority: insight.priority,
+    summary: synced.summary,
+    healthScore: synced.healthScore,
+    growthScore: synced.growthScore,
+    harvestChancePercent: synced.harvestChancePercent,
+    harvestChanceNote: synced.harvestChanceNote,
+    riskLevel: synced.riskLevel,
+    priority: synced.priority,
     pests: pests,
     diseases: diseases,
-    waterStatus: insight.waterStatus,
-    waterSymptoms: insight.waterSymptoms,
-    waterAdvice: insight.waterAdvice,
+    waterStatus: synced.waterStatus,
+    waterSymptoms: synced.waterSymptoms,
+    waterAdvice: synced.waterAdvice,
     nutrients: nutrients,
-    growthPhaseDetail: insight.growthPhaseDetail,
-    harvestReady: insight.harvestReady,
-    ripenessNote: insight.ripenessNote,
-    floweringStatus: insight.floweringStatus,
-    floweringNote: insight.floweringNote,
-    growthScheduleStatus: insight.growthScheduleStatus,
-    growthScheduleWeeksDelta: insight.growthScheduleWeeksDelta,
-    growthScheduleNote: insight.growthScheduleNote,
-    adjustedHarvestLabel: insight.adjustedHarvestLabel,
-    pruningAdvice: insight.pruningAdvice,
-    weedsDetected: insight.weedsDetected,
-    weedsNote: insight.weedsNote,
-    sunlightLevel: insight.sunlightLevel,
-    sunlightAdvice: insight.sunlightAdvice,
-    problems: insight.problems,
-    recommendedActions: insight.recommendedActions,
-    coachTasks: insight.coachTasks,
+    growthPhaseDetail: synced.growthPhaseDetail,
+    harvestReady: synced.harvestReady,
+    moreHarvestExpectedThisSeason: synced.moreHarvestExpectedThisSeason,
+    seasonHarvestComplete: synced.seasonHarvestComplete,
+    harvestAlternativeTips: synced.harvestAlternativeTips,
+    plantLikelyDead: synced.plantLikelyDead,
+    deadPlantCheckSteps: synced.deadPlantCheckSteps,
+    ripenessNote: synced.ripenessNote,
+    floweringStatus: synced.floweringStatus,
+    floweringNote: synced.floweringNote,
+    growthScheduleStatus: synced.growthScheduleStatus,
+    growthScheduleWeeksDelta: synced.growthScheduleWeeksDelta,
+    growthScheduleNote: synced.growthScheduleNote,
+    adjustedHarvestLabel: synced.adjustedHarvestLabel,
+    pruningAdvice: synced.pruningAdvice,
+    weedsDetected: synced.weedsDetected,
+    weedsNote: synced.weedsNote,
+    sunlightLevel: synced.sunlightLevel,
+    sunlightAdvice: synced.sunlightAdvice,
+    problems: synced.problems,
+    recommendedActions: synced.recommendedActions,
+    coachTasks: synced.coachTasks,
+    moduleConfidence: synced.moduleConfidence,
+    scanComparisonBullets: synced.scanComparisonBullets,
+    leafAnalysisNote: synced.leafAnalysisNote,
+    strengths: synced.strengths,
+    attentionPoints: synced.attentionPoints,
+    environmentNote: synced.environmentNote,
+    weekFocus: synced.weekFocus,
+    outlookBullets: synced.outlookBullets,
+    coachWeekPlan: synced.coachWeekPlan,
+    didYouKnow: synced.didYouKnow,
+    fruitSizeVsMarket: synced.fruitSizeVsMarket,
+    visualObservations: synced.visualObservations,
+    scanAssessments: synced.scanAssessments,
   );
 }
 

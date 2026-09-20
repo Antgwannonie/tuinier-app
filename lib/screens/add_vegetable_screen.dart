@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/add_plant_apply.dart';
+import '../data/ai_settings_store.dart';
+import '../data/garden_notifications_sync.dart';
+import '../data/plant_season_activation.dart';
 import '../data/garden_profile_store.dart';
 import '../data/garden_scan_prefs_store.dart';
 import '../data/my_garden_store.dart';
@@ -18,12 +22,14 @@ class AddVegetableScreen extends StatefulWidget {
     required this.gardenStore,
     required this.profileStore,
     required this.scanPrefs,
+    required this.aiSettings,
   });
 
   final VegetableRepository repository;
   final MyGardenStore gardenStore;
   final GardenProfileStore profileStore;
   final GardenScanPrefsStore scanPrefs;
+  final AiSettingsStore aiSettings;
 
   @override
   State<AddVegetableScreen> createState() => _AddVegetableScreenState();
@@ -82,22 +88,37 @@ class _AddVegetableScreenState extends State<AddVegetableScreen> {
     final setup = await showAddPlantSetupSheet(
       context,
       vegetable: v,
+      repository: widget.repository,
+      aiSettings: widget.aiSettings,
     );
     if (setup == null || !mounted) return;
 
-    await widget.gardenStore.add(v.id);
-    await widget.profileStore.ensureProfile(
-      v.id,
-      plantedAt: setup.plantedAt,
-      location: setup.location,
-      sunLevel: setup.sunLevel,
-      isPlanted: setup.isPlanted,
-      plantingDateUnknown: setup.plantingDateUnknown,
+    final added = await applyAddPlantSetup(
+      gardenStore: widget.gardenStore,
+      profileStore: widget.profileStore,
+      setup: setup,
+      repository: widget.repository,
+      scanPrefs: widget.scanPrefs,
     );
     if (!mounted) return;
+    if (added) {
+      await syncGardenNotifications(
+        profileStore: widget.profileStore,
+        gardenStore: widget.gardenStore,
+        repository: widget.repository,
+        scanPrefs: widget.scanPrefs,
+      );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${v.nameNl} toegevoegd — planning op jouw situatie'),
+        content: Text(
+          addPlantSuccessMessage(
+            plantName: v.nameNl,
+            setup: setup,
+            added: added,
+            vegetable: v,
+          ),
+        ),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -154,7 +175,7 @@ class _AddVegetableScreenState extends State<AddVegetableScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Text(
-                  'Staat al op je lijst — nog niet als geplant',
+                  'Gepland voor het seizoen, nog niet gezaaid',
                   style: t.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: cs.primary,
@@ -171,7 +192,8 @@ class _AddVegetableScreenState extends State<AddVegetableScreen> {
                     leading: VegetableThumbnail(vegetable: v),
                     title: Text(v.nameNl),
                     subtitle: const Text(
-                      'Je hebt “Staat al in de grond” uit gezet of nog niet bevestigd.',
+                      'Staat op je lijst tot het zaai- of plantseizoen begint. '
+                      'Markeer als geplant zodra het in de grond staat.',
                     ),
                     trailing: FilledButton.tonal(
                       onPressed: () => _markPlanted(v),

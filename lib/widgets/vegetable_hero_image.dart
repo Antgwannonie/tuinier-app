@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../data/plant_image_frame_prefs_store.dart';
 import '../data/plant_scan_photo_store.dart';
 import '../data/vegetable_image_info.dart';
 import '../models/vegetable.dart';
@@ -20,6 +21,8 @@ class VegetableHeroImage extends StatelessWidget {
     this.borderRadius = const BorderRadius.vertical(top: Radius.circular(14)),
     /// Zoek-atlas en detailpagina: lokaal icoon / illustratie i.p.v. emoji.
     this.useAtlasIllustration = false,
+    /// Detailpagina: hele plant zichtbaar, achtergrond vult resterende ruimte.
+    this.detailHero = false,
   });
 
   final Vegetable vegetable;
@@ -28,26 +31,36 @@ class VegetableHeroImage extends StatelessWidget {
   final String? scanPhotoPath;
   final BorderRadius borderRadius;
   final bool useAtlasIllustration;
+  final bool detailHero;
 
-  static const _greenBg = Color(0xFFE8F5E9);
+  static const _greenBg = Color(0xFFD4E6D0);
+
+  static PlantImageFramePrefsStore? _frameStoreOf(BuildContext context) {
+    return context
+        .getInheritedWidgetOfExactType<PlantImageFrameScope>()
+        ?.notifier;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final frameStore = PlantImageFrameScope.maybeOf(context);
+    final frameStore = _frameStoreOf(context);
     if (frameStore != null) {
       return ListenableBuilder(
         listenable: frameStore,
-        builder: (context, _) => _buildHero(context),
+        builder: (context, _) => _buildHero(context, frameStore: frameStore),
       );
     }
-    return _buildHero(context);
+    return _buildHero(context, frameStore: null);
   }
 
-  Widget _buildHero(BuildContext context) {
+  Widget _buildHero(
+    BuildContext context, {
+    PlantImageFramePrefsStore? frameStore,
+  }) {
     final info = vegetableImageFor(vegetable.id);
     final cs = Theme.of(context).colorScheme;
     final bg = _backgroundFor(info, cs);
-    final image = _buildImage(context, info, bg);
+    final image = _buildImage(context, info, bg, frameStore: frameStore);
 
     final child = expand
         ? SizedBox.expand(child: image)
@@ -79,14 +92,20 @@ class VegetableHeroImage extends StatelessWidget {
     return info.greenBackground ? _greenBg : Colors.white;
   }
 
-  Widget _buildImage(BuildContext context, VegetableImageInfo info, Color bg) {
+  Widget _buildImage(
+    BuildContext context,
+    VegetableImageInfo info,
+    Color bg, {
+    PlantImageFramePrefsStore? frameStore,
+  }) {
     if (PlantScanPhotoStore.exists(scanPhotoPath)) {
       final fileImage = Image.file(
         File(scanPhotoPath!),
         fit: BoxFit.cover,
         width: expand ? double.infinity : null,
         height: expand ? double.infinity : height,
-        errorBuilder: (_, __, ___) => _stockOrEmoji(context, info, bg),
+        errorBuilder: (_, __, ___) =>
+            _stockOrEmoji(context, info, bg, frameStore: frameStore),
       );
       return Builder(
         builder: (context) => GestureDetector(
@@ -95,21 +114,29 @@ class VegetableHeroImage extends StatelessWidget {
         ),
       );
     }
-    return _stockOrEmoji(context, info, bg);
+    return _stockOrEmoji(context, info, bg, frameStore: frameStore);
   }
 
   Widget _stockOrEmoji(
     BuildContext context,
     VegetableImageInfo info,
-    Color bg,
-  ) {
+    Color bg, {
+    PlantImageFramePrefsStore? frameStore,
+  }) {
     if (useAtlasIllustration) {
       if (!kAtlasIconsForAllPlants && info.assetPath == null) {
         return _emojiBox(info, bg, expand);
       }
       if (info.assetPath != null) {
-        final frameStore = PlantImageFrameScope.maybeOf(context);
-        if (frameStore != null && info.atlasCardCover) {
+        // Expliciete detail-banner wint altijd, ook bij transparante
+        // lijst-afbeeldingen (bijv. courgette).
+        if (detailHero &&
+            expand &&
+            (info.detailBannerAssetPath != null || !info.transparentAsset)) {
+          return _detailHeroPhoto(info);
+        }
+
+        if (frameStore != null && info.atlasCardCover && info.transparentAsset) {
           return _illustrationBox(
             context,
             PlantCardFramedImage(
@@ -166,6 +193,20 @@ class VegetableHeroImage extends StatelessWidget {
     return _emojiBox(info, bg, expand);
   }
 
+  /// Eén brede banner, cover — geen dubbele laag / geplakte randen.
+  Widget _detailHeroPhoto(VegetableImageInfo info) {
+    final path = info.detailBannerAssetPath ?? info.assetPath!;
+    return Image.asset(
+      path,
+      fit: BoxFit.cover,
+      alignment: Alignment(0, info.detailBannerAlignY),
+      width: double.infinity,
+      height: double.infinity,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, __, ___) => _emojiBox(info, _greenBg, true),
+    );
+  }
+
   Widget _illustrationBox(
     BuildContext context,
     Widget image,
@@ -191,26 +232,15 @@ class VegetableHeroImage extends StatelessWidget {
     }
 
     if (cardCover && !skipCardCoverWrapper) {
-      final skyBg = info.atlasCardPrecropped
-          ? const Color(0xFF8EC8E8)
-          : bg;
-      final framed = ColoredBox(color: skyBg, child: content);
+      final framed = info.atlasCardPrecropped
+          ? ColoredBox(color: const Color(0xFF8EC8E8), child: content)
+          : content;
       return expand
           ? SizedBox.expand(child: framed)
           : SizedBox(
               width: double.infinity,
               height: height,
               child: framed,
-            );
-    }
-
-    if (skipCardCoverWrapper) {
-      return expand
-          ? SizedBox.expand(child: content)
-          : SizedBox(
-              width: double.infinity,
-              height: height,
-              child: content,
             );
     }
 

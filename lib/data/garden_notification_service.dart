@@ -5,11 +5,14 @@ import 'package:timezone/timezone.dart' as tz;
 import '../models/garden_note.dart';
 import '../models/garden_plant_profile.dart';
 import '../models/vegetable.dart';
+import 'crop_lifecycle_metadata.dart';
 import 'garden_notes_store.dart';
 import 'crop_harvest_kind.dart';
 import 'garden_plant_schedule.dart';
 import 'garden_profile_store.dart';
 import 'my_garden_store.dart';
+import 'plant_season_activation.dart';
+import 'plant_start_flow.dart';
 import 'vegetable_repository.dart';
 
 /// Meldingen: eerste foto, wekelijkse scan, oogst.
@@ -62,7 +65,10 @@ class GardenNotificationService {
     required int weeklyScanIntervalDays,
   }) async {
     await init();
-    await _plugin.cancelAll();
+    for (var i = 0; i < 64; i++) {
+      await _plugin.cancel(_baseId + i);
+      await _plugin.cancel(_notesBaseId + i);
+    }
 
     if (!enabled || gardenStore.isEmpty) return;
 
@@ -106,7 +112,7 @@ class GardenNotificationService {
         await _schedule(
           id: _notesBaseId + (note.id.hashCode.abs() % 500),
           when: when,
-          title: '$prefix — ${note.title}',
+          title: '$prefix ${note.title}',
           body: note.body.length > 120
               ? '${note.body.substring(0, 117)}…'
               : note.body,
@@ -125,7 +131,48 @@ class GardenNotificationService {
     final out = <_ScheduledNotify>[];
     final name = veg.nameNl;
 
-    if (!profile.isPlanted) return out;
+    if (!profile.isMoestuinActive &&
+        profile.inactiveReason == PlantMoestuinInactiveReason.offSeason) {
+      final start = nextPlantingSeasonStartDate(
+        vegetable: veg,
+        plantStartMethod: profile.plantStartMethod,
+        reference: now,
+      );
+      if (start != null) {
+        final notifyAt = DateTime(start.year, start.month, start.day, 8, 0);
+        if (notifyAt.isAfter(now)) {
+          out.add(
+            _ScheduledNotify(
+              when: notifyAt,
+              title: 'Start met $name',
+              body:
+                  'Het zaai- of plantseizoen is begonnen. $name staat nu actief '
+                  'in je moestuin en je kunt beginnen met taken.',
+            ),
+          );
+        }
+      }
+      return out;
+    }
+
+    if (!profile.isMoestuinActive || !profile.isPlanted) return out;
+
+    if (profileAwaitingOutdoorPlanting(profile)) {
+      final outdoorAt = outdoorPlantingReminderAt(
+        vegetable: veg,
+        reference: now,
+      );
+      if (outdoorAt != null && outdoorAt.isAfter(now)) {
+        out.add(
+          _ScheduledNotify(
+            when: outdoorAt,
+            title: 'Buiten planten $name',
+            body:
+                'Je hebt $name binnen voorgezaaid. Tijd om buiten te planten.',
+          ),
+        );
+      }
+    }
 
     if (profile.lastAnalysis == null) {
       var firstPrompt = DateTime(now.year, now.month, now.day, 9, 30);
@@ -135,10 +182,10 @@ class GardenNotificationService {
       out.add(
         _ScheduledNotify(
           when: firstPrompt,
-          title: 'Eerste foto — $name',
+          title: 'Eerste foto $name',
           body:
               'Start je plantgeschiedenis: maak een foto van het zaadbed of de '
-              'plek in de grond — ook zonder zichtbare kiem.',
+              'plek in de grond, ook zonder zichtbare kiem.',
         ),
       );
       if (firstPhotoNotificationDue(
@@ -154,7 +201,7 @@ class GardenNotificationService {
           out.add(
             _ScheduledNotify(
               when: reminder,
-              title: 'Herinnering — $name',
+              title: 'Herinnering $name',
               body:
                   'Nog geen eerste scan? Leg je plant vast voor persoonlijke '
                   'voortgang in de app.',
@@ -172,7 +219,7 @@ class GardenNotificationService {
       out.add(
         _ScheduledNotify(
           when: DateTime(scanDue.year, scanDue.month, scanDue.day, 10, 0),
-          title: 'Wekelijkse scan — $name',
+          title: 'Wekelijkse scan $name',
           body:
               'Maak een nieuwe foto zodat oogst en groei in je kalender bijblijven.',
         ),
@@ -187,7 +234,7 @@ class GardenNotificationService {
             out.add(
               _ScheduledNotify(
                 when: DateTime(remind.year, remind.month, remind.day, 9, 0),
-                title: 'Oogst nadert — $name',
+                title: 'Oogst nadert $name',
                 body: profile.lastAnalysis?.harvestWindowLabel ??
                     'Binnenkort oogsten volgens je laatste scan.',
               ),
@@ -196,7 +243,7 @@ class GardenNotificationService {
           out.add(
             _ScheduledNotify(
               when: DateTime(harvest.year, harvest.month, harvest.day, 8, 30),
-              title: 'Oogstdag — $name',
+              title: 'Oogstdag $name',
               body:
                   'Volgens je AI-scan is vandaag een goed moment om te oogsten.',
             ),
@@ -211,10 +258,10 @@ class GardenNotificationService {
           _ScheduledNotify(
             when: DateTime(now.year, now.month, now.day, 11, 0)
                 .add(const Duration(hours: 1)),
-            title: 'In bloei — $name',
+            title: 'In bloei $name',
             body: bloomNote.trim().isNotEmpty
                 ? '$bloomNote Plukken om te eten of seizoen afronden kan in de app.'
-                : 'Eetbaar of laten uitbloeien — open Tuinier bij je plant.',
+                : 'Eetbaar of laten uitbloeien open Tuinier bij je plant.',
           ),
         );
       } else if (isOrnamentalOnlyMoestuinCrop(veg) &&
@@ -224,10 +271,10 @@ class GardenNotificationService {
           _ScheduledNotify(
             when: DateTime(now.year, now.month, now.day, 11, 0)
                 .add(const Duration(hours: 1)),
-            title: 'In bloei — $name',
+            title: 'In bloei $name',
             body: bloomNote.trim().isNotEmpty
                 ? bloomNote
-                : 'Je moestuinbloem doet het goed — open Tuinier voor het advies.',
+                : 'Je moestuinbloem doet het goed open Tuinier voor het advies.',
           ),
         );
       } else if (isReadyToHarvest(profile, vegetable: veg)) {
@@ -235,7 +282,7 @@ class GardenNotificationService {
           _ScheduledNotify(
             when: DateTime(now.year, now.month, now.day, 11, 0)
                 .add(const Duration(hours: 1)),
-            title: 'Klaar om te oogsten — $name',
+            title: 'Klaar om te oogsten $name',
             body: 'Open Tuinier en controleer je plant in Plant scan.',
           ),
         );

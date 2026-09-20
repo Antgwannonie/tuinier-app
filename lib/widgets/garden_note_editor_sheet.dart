@@ -21,6 +21,162 @@ class SaveGardenNoteResult {
   final bool addToCalendar;
 }
 
+/// Resultaat van de note-weergave.
+enum GardenNoteViewerAction { edit, delete }
+
+/// Notitie alleen bekijken; tik op “Bewerken” of “Verwijderen”.
+Future<GardenNoteViewerAction?> showGardenNoteViewer({
+  required BuildContext context,
+  required GardenNote note,
+  VegetableRepository? repository,
+}) {
+  return showModalBottomSheet<GardenNoteViewerAction>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    builder: (ctx) {
+      final cs = Theme.of(ctx).colorScheme;
+      final t = Theme.of(ctx).textTheme;
+      final title = note.title.trim().isEmpty ? 'Zonder titel' : note.title;
+      final body = note.body.trim();
+      final dateLabel =
+          '${note.date.day}-${note.date.month}-${note.date.year}';
+      final plantNames = <String>[];
+      if (repository != null) {
+        for (final id in note.vegetableIds) {
+          final name = repository.byId(id)?.nameNl;
+          if (name != null) plantNames.add(name);
+        }
+      }
+
+      return SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            4,
+            20,
+            20 + MediaQuery.viewInsetsOf(ctx).bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  title,
+                  style: t.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  dateLabel,
+                  style: t.labelLarge?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (plantNames.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    plantNames.join(' · '),
+                    style: t.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                Text(
+                  body.isEmpty ? 'Geen tekst' : body,
+                  style: t.bodyLarge?.copyWith(
+                    height: 1.45,
+                    fontSize: 17,
+                    color: body.isEmpty ? cs.onSurfaceVariant : cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () async {
+                        final ok = await showDialog<bool>(
+                          context: ctx,
+                          builder: (dialogCtx) => AlertDialog(
+                            title: const Text('Note verwijderen?'),
+                            content: const Text(
+                              'Deze note wordt permanent verwijderd.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogCtx, false),
+                                child: const Text('Annuleren'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(dialogCtx, true),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: cs.error,
+                                ),
+                                child: const Text('Verwijderen'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (ok == true && ctx.mounted) {
+                          Navigator.pop(ctx, GardenNoteViewerAction.delete);
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: cs.error,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Verwijderen',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.pop(ctx, GardenNoteViewerAction.edit),
+                      style: TextButton.styleFrom(
+                        foregroundColor: cs.primary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Bewerken',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 /// Notitie schrijven + datum, type en groente-keuze.
 Future<SaveGardenNoteResult?> showGardenNoteEditor({
   required BuildContext context,
@@ -514,7 +670,7 @@ class _GardenNoteEditorSheetState extends State<_GardenNoteEditorSheet> {
                   if (_linkMode == _NoteLinkMode.gardenTask) ...[
                     const SizedBox(height: 10),
                     Text(
-                      'Algemene klus in de tuin — niet gekoppeld aan één plant.',
+                      'Algemene klus in de tuin, niet gekoppeld aan één plant.',
                       style: t.textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                         height: 1.35,

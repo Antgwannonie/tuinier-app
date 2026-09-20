@@ -2,7 +2,6 @@ import '../models/garden_plant_profile.dart';
 import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
 import 'garden_plant_schedule.dart';
-import 'garden_plant_schedule.dart';
 import 'garden_scan_prefs_store.dart';
 
 enum GrowthScheduleStatus {
@@ -104,14 +103,19 @@ PlantGrowthInsight? growthInsightFor(
   }
 
   final today = _dateOnly(reference ?? DateTime.now());
-  final days = analysis.daysUntilHarvest;
+  final harvestAllowed =
+      canUseAiHarvestAssessment(profile, vegetable: vegetable);
+  final days =
+      harvestAllowed ? remainingHarvestDays(profile, reference: today) : null;
   final scheduleStatus = _scheduleFromAnalysis(analysis, profile, today);
 
   String summaryLine;
-  if (analysis.phase == PlantAiPhase.ripe) {
+  if (!harvestAllowed) {
+    summaryLine = 'Fase: ${analysis.phaseLabel}';
+  } else if (analysis.phase == PlantAiPhase.ripe) {
     summaryLine = 'Klaar om te oogsten';
   } else if (days != null && days <= 0) {
-    summaryLine = 'Oogst mogelijk — controleer op de foto';
+    summaryLine = 'Oogst mogelijk, controleer op de foto';
   } else if (days != null) {
     summaryLine = 'Fase: ${analysis.phaseLabel} · oogst over ±$days dagen';
   } else {
@@ -125,9 +129,9 @@ PlantGrowthInsight? growthInsightFor(
     GrowthScheduleStatus.unknown => 70,
   };
 
-  final harvestLabel = profile.predictedHarvestAt != null
+  final harvestLabel = harvestAllowed && profile.predictedHarvestAt != null
       ? '± ${profile.predictedHarvestAt!.day}-${profile.predictedHarvestAt!.month}-${profile.predictedHarvestAt!.year}'
-      : analysis.harvestWindowLabel;
+      : (harvestAllowed ? analysis.harvestWindowLabel : vegetable.harvest);
 
   return PlantGrowthInsight(
     profile: profile,

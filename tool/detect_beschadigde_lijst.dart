@@ -57,7 +57,7 @@ const _hoogRisicoIds = {
   'tomaat',
   'aubergine',
   'peper',
-  'paprika',
+  'rode_paprika',
   'paprika_geel',
   'paprika_rood',
   'bruine_boon',

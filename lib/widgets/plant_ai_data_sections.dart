@@ -8,7 +8,7 @@ import '../models/plant_ai_analysis.dart';
 import 'garden_warning_style.dart';
 import 'plant_scan_timeline.dart';
 
-/// Jouw plant — compact overzicht met duidelijke actie.
+/// Jouw plant, compact overzicht met duidelijke actie.
 class PlantAiDataSections extends StatelessWidget {
   const PlantAiDataSections({
     super.key,
@@ -38,7 +38,8 @@ class PlantAiDataSections extends StatelessWidget {
           profile,
           daysUntilFirstPhoto: daysUntilFirstPhoto,
         );
-    final awaitingFirst = profile.isPlanted && awaitingFirstPhotoScan(profile);
+    final awaitingFirst =
+        profile.isPlanted && awaitingFirstPhotoScan(profile);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -65,144 +66,141 @@ class PlantAiDataSections extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _StatusChip(
-                  icon: Icons.yard_outlined,
-                  label: profile.isPlanted
-                      ? profilePlantedDateLabel(profile)
-                      : 'Nog niet geplant',
-                  active: profile.isPlanted,
-                ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _StatusChip(
+                icon: Icons.yard_outlined,
+                label: profile.isPlanted
+                    ? profilePlantedDateLabel(profile)
+                    : 'Nog niet geplant',
+                active: profile.isPlanted,
+              ),
+              _StatusChip(
+                icon: Icons.photo_camera_outlined,
+                label: analysis != null
+                    ? 'Gescand'
+                    : (awaitingFirst
+                        ? kFirstScanShortLabel
+                        : 'Nog geen foto'),
+                active: analysis != null,
+                urgent: needsPhoto,
+              ),
+              if (profile.isPlanted &&
+                  needsWeeklyScan(profile) &&
+                  analysis != null)
                 _StatusChip(
                   icon: Icons.photo_camera_outlined,
-                  label: analysis != null
-                      ? 'Gescand'
-                      : (awaitingFirst
-                          ? kFirstScanShortLabel
-                          : 'Nog geen foto'),
-                  active: analysis != null,
-                  urgent: needsPhoto,
+                  label: 'Nieuwe scan',
+                  active: false,
+                  urgent: true,
                 ),
-                if (profile.isPlanted &&
-                    needsWeeklyScan(profile) &&
-                    analysis != null)
-                  _StatusChip(
-                    icon: Icons.photo_camera_outlined,
-                    label: 'Nieuwe scan',
-                    active: false,
-                    urgent: true,
-                  ),
-                if (profile.predictedHarvestAt != null)
-                  _StatusChip(
-                    icon: Icons.shopping_basket_outlined,
-                    label: 'Oogst ${formatDateShortNl(profile.predictedHarvestAt!)}',
-                    active: true,
-                  )
-                else if (analysis?.daysUntilHarvest != null)
-                  _StatusChip(
-                    icon: Icons.schedule,
-                    label: analysis!.phase == PlantAiPhase.ripe
-                        ? 'Oogst nu'
-                        : 'Oogst ±${analysis.daysUntilHarvest}d',
-                    active: false,
-                    urgent: analysis.daysUntilHarvest! <= 7,
-                  ),
-              ],
+              if (profile.predictedHarvestAt != null)
+                _StatusChip(
+                  icon: Icons.shopping_basket_outlined,
+                  label:
+                      'Oogst ${formatDateShortNl(profile.predictedHarvestAt!)}',
+                  active: true,
+                )
+              else if (analysis?.daysUntilHarvest != null)
+                _StatusChip(
+                  icon: Icons.schedule,
+                  label: analysis!.phase == PlantAiPhase.ripe
+                      ? 'Oogst nu'
+                      : 'Oogst ±${analysis.daysUntilHarvest}d',
+                  active: false,
+                  urgent: analysis.daysUntilHarvest! <= 7,
+                ),
+            ],
+          ),
+          if (!profile.isPlanted) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Staat hij in de grond? Tik op het plant-icoon op de '
+              'plantkaart (midden).',
+              style: t.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
-            if (!profile.isPlanted) ...[
-              const SizedBox(height: 12),
+          ] else if (onScan != null && profile.isPlanted) ...[
+            const SizedBox(height: 14),
+            if (analysis == null) ...[
               Text(
-                'Staat hij in de grond? Tik op het plant-icoon op de '
-                'plantkaart (midden).',
+                kFirstScanMotivationMessage,
                 style: t.textTheme.bodyMedium?.copyWith(
                   color: cs.onSurfaceVariant,
+                  height: 1.4,
                 ),
               ),
-            ] else if (onScan != null) ...[
-              const SizedBox(height: 14),
-              if (analysis == null) ...[
-                Text(
-                  kFirstScanMotivationMessage,
-                  style: t.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Leg je plek in de grond vast — ook zonder zichtbare kiem.',
-                  style: t.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              FilledButton.icon(
-                onPressed: onScan,
-                icon: const Icon(Icons.photo_camera_outlined),
-                label: Text(
-                  analysis == null
-                      ? 'Eerste foto scannen'
-                      : needsWeeklyScan(profile)
-                          ? 'Nieuwe scan maken'
-                          : 'Foto bijwerken',
-                ),
-              ),
-            ],
-            if (includeScanHistory &&
-                plantScanEntries(profile).isNotEmpty) ...[
-              const SizedBox(height: 14),
-              PlantScanTimeline(
-                key: ValueKey('scan-timeline-${profile.vegetableId}'),
-                profileStore: profileStore,
-                profile: profile,
-              ),
-            ] else if (analysis != null &&
-                (!includeScanHistory ||
-                    plantScanEntries(profile).isEmpty)) ...[
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-              _AnalysisSummary(analysis: analysis),
-            ],
-            if (profile.nextScanDue != null) ...[
-              const SizedBox(height: 8),
-              _DetailRow(
-                label: 'Volgende scan',
-                value: needsWeeklyScan(profile)
-                    ? 'Nu (elke $weeklyScanIntervalDays dagen)'
-                    : formatDateShortNl(profile.nextScanDue!),
-              ),
-            ],
-            if (!includeScanHistory &&
-                plantScanEntries(profile).isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Text(
-                'Bekijk al je scans op het tabblad Scans.',
+                'Leg je plek in de grond vast, ook zonder zichtbare kiem.',
                 style: t.textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.35,
                 ),
               ),
+              const SizedBox(height: 10),
             ],
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Text(
-                '${profile.location.label} · ${profile.sunLevel.label}',
-                style: t.textTheme.labelMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+            FilledButton.icon(
+              onPressed: onScan,
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: Text(
+                analysis == null
+                    ? 'Eerste foto scannen'
+                    : needsWeeklyScan(profile)
+                        ? 'Nieuwe scan maken'
+                        : 'Foto bijwerken',
               ),
             ),
           ],
-        ),
+          if (includeScanHistory && plantScanEntries(profile).isNotEmpty) ...[
+            const SizedBox(height: 14),
+            PlantScanTimeline(
+              key: ValueKey('scan-timeline-${profile.vegetableId}'),
+              profileStore: profileStore,
+              profile: profile,
+            ),
+          ] else if (analysis != null &&
+              (!includeScanHistory || plantScanEntries(profile).isEmpty)) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            _AnalysisSummary(analysis: analysis),
+          ],
+          if (profile.nextScanDue != null) ...[
+            const SizedBox(height: 8),
+            _DetailRow(
+              label: 'Volgende scan',
+              value: needsWeeklyScan(profile)
+                  ? 'Nu (elke $weeklyScanIntervalDays dagen)'
+                  : formatDateShortNl(profile.nextScanDue!),
+            ),
+          ],
+          if (!includeScanHistory && plantScanEntries(profile).isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Het aantal open taken staat op de plantkaart.',
+              style: t.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.35,
+              ),
+            ),
+          ],
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(
+              '${profile.location.label} · ${profile.sunLevel.label}',
+              style: t.textTheme.labelMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
-
 }
 
 class _StatusChip extends StatelessWidget {

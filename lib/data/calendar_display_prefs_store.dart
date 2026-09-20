@@ -174,22 +174,27 @@ class CalendarDisplayPrefsStore extends ChangeNotifier {
   }
 
   /// Gewas-ids die op de kalender getoond worden.
+  ///
+  /// Met [gardenOnly] (Planner-tab) alleen planten uit de moestuin; nooit de
+  /// volledige database. Zonder moestuinplanten: lege set.
   Set<String> visibleVegetableIds({
     required VegetableRepository repository,
     required MyGardenStore gardenStore,
+    bool gardenOnly = false,
   }) {
     Iterable<String> candidateIds;
-    switch (_mode) {
-      case CalendarViewMode.myGarden:
-        if (gardenStore.isEmpty) {
-          candidateIds = repository.all.map((v) => v.id);
-        } else {
+    if (gardenOnly) {
+      candidateIds = gardenStore.ids;
+    } else {
+      switch (_mode) {
+        case CalendarViewMode.myGarden:
+          // Alleen moestuinplanten — geen fallback naar de hele database.
           candidateIds = gardenStore.ids;
-        }
-      case CalendarViewMode.all:
-        candidateIds = repository.all.map((v) => v.id);
-      case CalendarViewMode.custom:
-        candidateIds = _customIds;
+        case CalendarViewMode.all:
+          candidateIds = repository.all.map((v) => v.id);
+        case CalendarViewMode.custom:
+          candidateIds = _customIds;
+      }
     }
 
     final filtered = <String>{
@@ -203,10 +208,17 @@ class CalendarDisplayPrefsStore extends ChangeNotifier {
     required MyGardenStore gardenStore,
     required int visibleCount,
     required int totalCount,
+    bool gardenOnly = false,
   }) {
+    if (gardenOnly) {
+      if (gardenStore.isEmpty) {
+        return 'Mijn moestuin · voeg eerst planten toe';
+      }
+      return 'Mijn moestuin · $visibleCount plant(en)';
+    }
     final modeLabel = switch (_mode) {
       CalendarViewMode.myGarden =>
-        gardenStore.isEmpty ? 'Alle groenten' : 'Mijn moestuin',
+        gardenStore.isEmpty ? 'Mijn moestuin (leeg)' : 'Mijn moestuin',
       CalendarViewMode.all => 'Alle groenten',
       CalendarViewMode.custom => 'Zelf gekozen',
     };

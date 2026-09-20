@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/vegetable_image_info.dart';
 import '../models/vegetable.dart';
+import '../theme/tuinier_colors.dart';
 
 /// Foto of emoji op groene of witte achtergrond.
 class VegetableThumbnail extends StatelessWidget {
@@ -23,7 +24,7 @@ class VegetableThumbnail extends StatelessWidget {
   final double size;
   final double borderRadius;
 
-  static const _greenBg = Color(0xFFE8F5E9);
+  static const _greenBg = TuinierColors.cardTintGreen;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +38,7 @@ class VegetableThumbnail extends StatelessWidget {
       );
     }
 
-    final bg = info.greenBackground ? _greenBg : Colors.white;
+    final bg = info.greenBackground ? _greenBg : TuinierColors.card;
 
     return Container(
       width: size,
@@ -45,7 +46,7 @@ class VegetableThumbnail extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: TuinierColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: _thumbnailImage(context, info, BoxFit.cover),
@@ -99,7 +100,7 @@ class VegetableThumbnail extends StatelessWidget {
               height: size * 0.35,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.green.shade700,
+                color: TuinierColors.midGreen,
               ),
             )
           : Text(

@@ -29,11 +29,11 @@ extension GardenTaskTypeShortLabel on GardenTaskType {
   String get shortLabel {
     switch (this) {
       case GardenTaskType.preSow:
-        return 'Voorzaaien';
+        return 'Binnen voorzaaien';
       case GardenTaskType.sowOutdoors:
-        return 'Zaaien buiten';
+        return 'Buiten zaaien';
       case GardenTaskType.plantOutdoors:
-        return 'Planten';
+        return 'Buiten planten';
       case GardenTaskType.harvest:
         return 'Oogsten';
     }

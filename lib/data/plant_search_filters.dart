@@ -1,6 +1,8 @@
 import '../models/vegetable.dart';
+import '../models/vegetable_group.dart';
 import 'moestuin_companion_plants.dart';
 import 'planting_calendar.dart';
+import 'underground_crop.dart';
 import 'vegetable_groups.dart';
 import 'vegetable_repository.dart';
 
@@ -127,6 +129,316 @@ enum SeasonFilter {
   String get emoji => '📅';
 }
 
+enum PlantHabitFilter {
+  climber,
+  nonClimber;
+
+  String get label {
+    switch (this) {
+      case PlantHabitFilter.climber:
+        return 'Klimmers';
+      case PlantHabitFilter.nonClimber:
+        return 'Geen klimmer';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case PlantHabitFilter.climber:
+        return '🪜';
+      case PlantHabitFilter.nonClimber:
+        return '🌱';
+    }
+  }
+}
+
+/// Plantafstand voor bakplanning.
+enum SpacingFilter {
+  compact,
+  medium,
+  wide;
+
+  String get label {
+    switch (this) {
+      case SpacingFilter.compact:
+        return 'Compact (≤ 20 cm)';
+      case SpacingFilter.medium:
+        return 'Gemiddeld (21–40 cm)';
+      case SpacingFilter.wide:
+        return 'Ruim (> 40 cm)';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case SpacingFilter.compact:
+        return '▫️';
+      case SpacingFilter.medium:
+        return '◻️';
+      case SpacingFilter.wide:
+        return '⬜';
+    }
+  }
+
+  bool matches(int spacingCm) {
+    switch (this) {
+      case SpacingFilter.compact:
+        return spacingCm <= 20;
+      case SpacingFilter.medium:
+        return spacingCm >= 21 && spacingCm <= 40;
+      case SpacingFilter.wide:
+        return spacingCm > 40;
+    }
+  }
+}
+
+enum PlantGrowthSpeedFilter {
+  fast,
+  medium,
+  long;
+
+  String get label {
+    switch (this) {
+      case PlantGrowthSpeedFilter.fast:
+        return 'Snel oogstrijp (≤45 d)';
+      case PlantGrowthSpeedFilter.medium:
+        return 'Gemiddeld (46–80 d)';
+      case PlantGrowthSpeedFilter.long:
+        return 'Langzaam (>80 d)';
+    }
+  }
+
+  String get emoji => '⏱️';
+}
+
+/// Korte maandnamen voor zaai-filters.
+const List<String> kSowingMonthShortLabels = [
+  '',
+  'jan',
+  'feb',
+  'mrt',
+  'apr',
+  'mei',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'okt',
+  'nov',
+  'dec',
+];
+
+enum PlantHarvestLocationFilter {
+  underground,
+  aboveGround;
+
+  String get label {
+    switch (this) {
+      case PlantHarvestLocationFilter.underground:
+        return 'Ondergronds';
+      case PlantHarvestLocationFilter.aboveGround:
+        return 'Bovengronds';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case PlantHarvestLocationFilter.underground:
+        return '🥔';
+      case PlantHarvestLocationFilter.aboveGround:
+        return '🥬';
+    }
+  }
+}
+
+/// Volgorde verzamelgroepen in het filterpaneel (plantengids).
+const List<String> kPlantGuideVegetableGroupFilterOrder = [
+  'tomaten',
+  'paprika_peper',
+  'komkommer_familie',
+  'bonen',
+  'wortelgroenten',
+  'bieten',
+  'kolen',
+  'bladgroenten',
+  'sla_soorten',
+  'uien',
+  'aardappel',
+  'aubergine',
+  'mais',
+  'meloenen',
+  'meerjarig',
+  'aziatische_groenten',
+  'kruiden',
+  'moestuin_bloemen',
+  'bloemen_zaden',
+  'fruit_bomen',
+  'bessen',
+  'paddestoelen',
+];
+
+const Map<String, String> kVegetableGroupFilterEmojis = {
+  'tomaten': '🍅',
+  'paprika_peper': '🫑',
+  'komkommer_familie': '🥒',
+  'bonen': '🫛',
+  'wortelgroenten': '🥕',
+  'bieten': '🟣',
+  'kolen': '🥬',
+  'bladgroenten': '🥬',
+  'sla_soorten': '🥗',
+  'uien': '🧅',
+  'aardappel': '🥔',
+  'aubergine': '🍆',
+  'mais': '🌽',
+  'meloenen': '🍈',
+  'meerjarig': '🌿',
+  'aziatische_groenten': '🥢',
+  'kruiden': '🌿',
+  'moestuin_bloemen': '🌼',
+  'bloemen_zaden': '🌸',
+  'fruit_bomen': '🍎',
+  'bessen': '🫐',
+  'paddestoelen': '🍄',
+};
+
+/// Groepslidmaatschap per plant-id (voor filters).
+final Map<String, Set<String>> kPlantVegetableGroupIds = () {
+  final map = <String, Set<String>>{};
+  for (final g in kVegetableGroups) {
+    for (final id in g.vegetableIds) {
+      map.putIfAbsent(id, () => <String>{}).add(g.id);
+    }
+  }
+  return map;
+}();
+
+VegetableGroup? vegetableGroupByIdForFilter(String groupId) {
+  for (final g in kVegetableGroups) {
+    if (g.id == groupId) return g;
+  }
+  return null;
+}
+
+bool plantMatchesVegetableGroups(String vegetableId, Set<String> groupIds) {
+  if (groupIds.isEmpty) return true;
+  final membership = kPlantVegetableGroupIds[vegetableId];
+  if (membership == null) return false;
+  return membership.any(groupIds.contains);
+}
+
+bool isClimbingVegetable(Vegetable v) {
+  const climberIds = {
+    'tomaat',
+    'snoeptomaat',
+    'cherrytomaat',
+    'pruimtomaat',
+    'vleestomaat',
+    'trostomaat',
+    'cocktailtomaat',
+    'balkontomaat',
+    'honingtomaat',
+    'komkommer',
+    'snackkomkommer',
+    'cucamelon',
+    'augurk',
+    'courgette',
+    'courgette_geel',
+    'patisson',
+    'patisson_geel',
+    'snijbonen',
+    'sugarsnaps',
+    'tuinerwt',
+    'doperwt',
+    'peultjes',
+    'haricots_verts',
+    'pompoen',
+    'reuzen_pompoen',
+    'pompoen_hokkaido',
+    'pompoen_butternut',
+    'watermeloen',
+    'meloen',
+    'galia_meloen',
+    'honingmeloen',
+    'pepino',
+    'druif',
+    'framboos',
+    'braam',
+    'kiwi',
+    'aardbei',
+    'aardbei_everbearer',
+    'okra',
+  };
+  if (climberIds.contains(v.id)) return true;
+
+  final hay =
+      '${v.care} ${v.summary} ${v.transplant} ${v.sunRequirement} ${v.keywords.join(' ')}'
+          .toLowerCase();
+  return hay.contains('klim') ||
+      hay.contains('rank') ||
+      hay.contains('stokboon') ||
+      hay.contains('stokbonen') ||
+      hay.contains('trellis') ||
+      hay.contains('klimrek') ||
+      hay.contains('klimras') ||
+      hay.contains('uitbinden') ||
+      hay.contains('steunpaal') ||
+      hay.contains('steunpaal') ||
+      (hay.contains('steun') && !hay.contains('geen steun'));
+}
+
+/// Middelpunt van `cropDuration` in dagen, of null als niet parsebaar.
+int? cropDurationDaysMidpoint(Vegetable v) {
+  final raw = v.cropDuration?.toLowerCase().trim();
+  if (raw == null || raw.isEmpty) return null;
+  if (raw.contains('lang seizoen') ||
+      raw.contains('seizoensproductie') ||
+      raw.contains('meerjarig')) {
+    return 120;
+  }
+  final range = RegExp(r'(\d+)\s*(?:[–\-]|tot)\s*(\d+)').firstMatch(raw);
+  if (range != null) {
+    final a = int.tryParse(range.group(1)!);
+    final b = int.tryParse(range.group(2)!);
+    if (a != null && b != null) return ((a + b) / 2).round();
+  }
+  final single = RegExp(r'(\d+)').firstMatch(raw);
+  if (single != null) return int.tryParse(single.group(1)!);
+  return null;
+}
+
+PlantGrowthSpeedFilter? growthSpeedForPlant(Vegetable v) {
+  final days = cropDurationDaysMidpoint(v);
+  if (days != null) {
+    if (days <= 45) return PlantGrowthSpeedFilter.fast;
+    if (days <= 80) return PlantGrowthSpeedFilter.medium;
+    return PlantGrowthSpeedFilter.long;
+  }
+  final cat = (v.growthCategory ?? '').toLowerCase();
+  if (cat.contains('snelle')) return PlantGrowthSpeedFilter.fast;
+  if (cat.contains('lang producerende') ||
+      cat.contains('zomerplant') ||
+      cat.contains('meerjarig')) {
+    return PlantGrowthSpeedFilter.long;
+  }
+  if (cat.contains('middelmatige')) return PlantGrowthSpeedFilter.medium;
+  return null;
+}
+
+/// Zaaimaanden (voorzaai + buiten zaaien), voor bakplanning.
+Set<int> sowingMonthsForPlant(Vegetable v) {
+  final months = <int>{}
+    ..addAll(_monthsFromText('${v.sowingIndoors} ${v.sowingOutdoors}'));
+  for (final a in allPlantingCalendarActivities()) {
+    if (a.vegetableId != v.id) continue;
+    if (a.type == GardenTaskType.preSow ||
+        a.type == GardenTaskType.sowOutdoors) {
+      months.addAll(a.months);
+    }
+  }
+  return months;
+}
+
 const Set<String> _kHerbGroupIds = {'kruiden'};
 const Set<String> _kFlowerGroupIds = {'bloemen_zaden'};
 const Set<String> _kCompanionGroupIds = {'moestuin_bloemen'};
@@ -207,6 +519,14 @@ PlantBrowseKind browseKindForGroupId(String? groupId) {
   if (_kMushroomGroupIds.contains(groupId)) return PlantBrowseKind.mushrooms;
   if (_kGroenteGroupIds.contains(groupId)) return PlantBrowseKind.groente;
   return PlantBrowseKind.all;
+}
+
+bool isFlowerGuidePlant(String vegetableId) {
+  final groups = kPlantVegetableGroupIds[vegetableId];
+  if (groups == null) return false;
+  return groups.contains('moestuin_bloemen') ||
+      groups.contains('bloemen_zaden') ||
+      kCompanionGardenPlantIds.contains(vegetableId);
 }
 
 SunFilter classifySun(String sunRequirement) {
@@ -310,36 +630,77 @@ Set<SeasonFilter> seasonsForPlant(Vegetable v) {
 class PlantSearchCriteria {
   const PlantSearchCriteria({
     this.browse = PlantBrowseKind.all,
+    this.vegetableGroupIds = const {},
     this.sunFilters = const {},
     this.waterFilters = const {},
     this.seasonFilters = const {},
+    this.habitFilters = const {},
+    this.growthSpeedFilters = const {},
+    this.harvestLocationFilters = const {},
+    this.spacingFilters = const {},
+    this.sowingMonthFilters = const {},
+    this.flowersOnly = false,
   });
 
   final PlantBrowseKind browse;
+  final Set<String> vegetableGroupIds;
   final Set<SunFilter> sunFilters;
   final Set<WaterFilter> waterFilters;
   final Set<SeasonFilter> seasonFilters;
+  final Set<PlantHabitFilter> habitFilters;
+  final Set<PlantGrowthSpeedFilter> growthSpeedFilters;
+  final Set<PlantHarvestLocationFilter> harvestLocationFilters;
+  final Set<SpacingFilter> spacingFilters;
+  /// Maanden 1–12 waarin gezaaid mag worden.
+  final Set<int> sowingMonthFilters;
+  final bool flowersOnly;
+
+  bool get hasActiveFilters => activeFilterCount > 0;
 
   int get activeFilterCount {
     var n = 0;
     if (browse != PlantBrowseKind.all) n++;
+    n += vegetableGroupIds.length;
     n += sunFilters.length;
     n += waterFilters.length;
     n += seasonFilters.length;
+    n += habitFilters.length;
+    n += growthSpeedFilters.length;
+    n += harvestLocationFilters.length;
+    n += spacingFilters.length;
+    n += sowingMonthFilters.length;
+    if (flowersOnly) n++;
     return n;
   }
 
+  PlantSearchCriteria cleared() => const PlantSearchCriteria();
+
   PlantSearchCriteria copyWith({
     PlantBrowseKind? browse,
+    Set<String>? vegetableGroupIds,
     Set<SunFilter>? sunFilters,
     Set<WaterFilter>? waterFilters,
     Set<SeasonFilter>? seasonFilters,
+    Set<PlantHabitFilter>? habitFilters,
+    Set<PlantGrowthSpeedFilter>? growthSpeedFilters,
+    Set<PlantHarvestLocationFilter>? harvestLocationFilters,
+    Set<SpacingFilter>? spacingFilters,
+    Set<int>? sowingMonthFilters,
+    bool? flowersOnly,
   }) {
     return PlantSearchCriteria(
       browse: browse ?? this.browse,
+      vegetableGroupIds: vegetableGroupIds ?? this.vegetableGroupIds,
       sunFilters: sunFilters ?? this.sunFilters,
       waterFilters: waterFilters ?? this.waterFilters,
       seasonFilters: seasonFilters ?? this.seasonFilters,
+      habitFilters: habitFilters ?? this.habitFilters,
+      growthSpeedFilters: growthSpeedFilters ?? this.growthSpeedFilters,
+      harvestLocationFilters:
+          harvestLocationFilters ?? this.harvestLocationFilters,
+      spacingFilters: spacingFilters ?? this.spacingFilters,
+      sowingMonthFilters: sowingMonthFilters ?? this.sowingMonthFilters,
+      flowersOnly: flowersOnly ?? this.flowersOnly,
     );
   }
 }
@@ -350,7 +711,46 @@ bool plantMatchesBrowse(String vegetableId, PlantBrowseKind browse) {
 }
 
 bool plantMatchesCriteria(Vegetable v, PlantSearchCriteria criteria) {
-  if (!plantMatchesBrowse(v.id, criteria.browse)) return false;
+  if (criteria.vegetableGroupIds.isNotEmpty) {
+    if (!plantMatchesVegetableGroups(v.id, criteria.vegetableGroupIds)) {
+      return false;
+    }
+  } else if (!plantMatchesBrowse(v.id, criteria.browse)) {
+    return false;
+  }
+
+  if (criteria.flowersOnly && !isFlowerGuidePlant(v.id)) {
+    return false;
+  }
+
+  if (criteria.habitFilters.isNotEmpty) {
+    final climbs = isClimbingVegetable(v);
+    final matchesHabit = criteria.habitFilters.any((h) {
+      return switch (h) {
+        PlantHabitFilter.climber => climbs,
+        PlantHabitFilter.nonClimber => !climbs,
+      };
+    });
+    if (!matchesHabit) return false;
+  }
+
+  if (criteria.growthSpeedFilters.isNotEmpty) {
+    final speed = growthSpeedForPlant(v);
+    if (speed == null || !criteria.growthSpeedFilters.contains(speed)) {
+      return false;
+    }
+  }
+
+  if (criteria.harvestLocationFilters.isNotEmpty) {
+    final underground = isUndergroundCrop(v);
+    final matchesLocation = criteria.harvestLocationFilters.any((h) {
+      return switch (h) {
+        PlantHarvestLocationFilter.underground => underground,
+        PlantHarvestLocationFilter.aboveGround => !underground,
+      };
+    });
+    if (!matchesLocation) return false;
+  }
 
   if (criteria.sunFilters.isNotEmpty) {
     if (!criteria.sunFilters.contains(classifySun(v.sunRequirement))) {
@@ -367,6 +767,17 @@ bool plantMatchesCriteria(Vegetable v, PlantSearchCriteria criteria) {
   if (criteria.seasonFilters.isNotEmpty) {
     final seasons = seasonsForPlant(v);
     if (!criteria.seasonFilters.any(seasons.contains)) return false;
+  }
+
+  if (criteria.sowingMonthFilters.isNotEmpty) {
+    final months = sowingMonthsForPlant(v);
+    if (!criteria.sowingMonthFilters.any(months.contains)) return false;
+  }
+
+  if (criteria.spacingFilters.isNotEmpty) {
+    if (!criteria.spacingFilters.any((f) => f.matches(v.spacingCm))) {
+      return false;
+    }
   }
 
   return true;

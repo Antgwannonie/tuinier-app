@@ -256,17 +256,17 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
     months: [7, 8, 9, 10],
   ),
   VegetableMonthActivity(
-    vegetableId: 'paprika',
+    vegetableId: 'rode_paprika',
     type: GardenTaskType.preSow,
     months: [2, 3, 4],
   ),
   VegetableMonthActivity(
-    vegetableId: 'paprika',
+    vegetableId: 'rode_paprika',
     type: GardenTaskType.plantOutdoors,
     months: [5],
   ),
   VegetableMonthActivity(
-    vegetableId: 'paprika',
+    vegetableId: 'rode_paprika',
     type: GardenTaskType.harvest,
     months: [8, 9, 10],
   ),
@@ -789,17 +789,17 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
     months: [10, 11, 12, 1, 2, 3],
   ),
   VegetableMonthActivity(
-    vegetableId: 'raps_kool',
+    vegetableId: 'chinese_kool',
     type: GardenTaskType.preSow,
     months: [4, 5, 6, 7],
   ),
   VegetableMonthActivity(
-    vegetableId: 'raps_kool',
+    vegetableId: 'chinese_kool',
     type: GardenTaskType.plantOutdoors,
     months: [6, 7, 8],
   ),
   VegetableMonthActivity(
-    vegetableId: 'raps_kool',
+    vegetableId: 'chinese_kool',
     type: GardenTaskType.harvest,
     months: [9, 10, 11],
   ),
@@ -845,7 +845,7 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
     vegetableId: 'peterselie',
     type: GardenTaskType.preSow,
     months: [2, 3],
-    hint: 'Kiemt traag — geduld.',
+    hint: 'Kiemt traag, heb geduld.',
   ),
   VegetableMonthActivity(
     vegetableId: 'peterselie',
@@ -934,6 +934,163 @@ const List<VegetableMonthActivity> kPlantingCalendar = [
     type: GardenTaskType.preSow,
     months: [1, 2, 3, 4, 5, 9, 10, 11, 12],
     hint: 'Donkere, koele ruimte binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'koningsoesterzwam',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Growkit of substraa inoculeren binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'maitake',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Hout- of zaagsel-substraat binnen inoculeren.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'reishi',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Houtblok inoculeren; langzaam proces.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'zomerpaddestoel',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Growkit of zaagsel-substraat binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'nameko',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Growkit binnen; koel en vochtig houden.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'portobello',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    hint: 'Koelere ruimte; vermijd zomerhitte.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'champignon_wit',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+    hint: 'Donkere, koele ruimte of growkit.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'lions_mane',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Growkit of zaagsel-substraat binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'enoki',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Koel binnen; hoge luchtvochtigheid.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'shimeji',
+    type: GardenTaskType.preSow,
+    months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    hint: 'Growkit of zaagsel-substraat binnen.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'morielzwam',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4, 5],
+    hint: 'Buitenbed inoculeren in het voorjaar.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'morielzwam',
+    type: GardenTaskType.harvest,
+    months: [4, 5],
+    hint: 'Voorjaarsoogst bij vochtig weer (uitdagend).',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'wijnrood_stropharia',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4, 5],
+    hint: 'Mulch- of compostbed buiten inoculeren.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'wijnrood_stropharia',
+    type: GardenTaskType.harvest,
+    months: [7, 8, 9, 10, 11],
+    hint: 'Oogst na regen in laat zomer en herfst.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'blauwe_ridderzwam',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4, 5],
+    hint: 'Compost- of mulchbed in schaduw inoculeren.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'blauwe_ridderzwam',
+    type: GardenTaskType.harvest,
+    months: [9, 10, 11],
+    hint: 'Herfstoogst bij vochtig, koel weer.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'peterseliewortel',
+    type: GardenTaskType.preSow,
+    months: [2, 3],
+    hint: 'Kiemt traag; diepe tray of direct buiten.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'peterseliewortel',
+    type: GardenTaskType.sowOutdoors,
+    months: [3, 4],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'peterseliewortel',
+    type: GardenTaskType.harvest,
+    months: [10, 11, 12, 1, 2, 3],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'gember',
+    type: GardenTaskType.preSow,
+    months: [2, 3, 4],
+    hint: 'Rhizoom met oog op potgrond in kas of vensterbank.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'gember',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6],
+    hint: 'In grote pot op warme plek.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'gember',
+    type: GardenTaskType.harvest,
+    months: [10, 11],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'citroengras',
+    type: GardenTaskType.preSow,
+    months: [3, 4],
+    hint: 'Delen of jonge plant voorzaaien op warm.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'citroengras',
+    type: GardenTaskType.plantOutdoors,
+    months: [5, 6],
+    hint: 'In pot op terras of in kas.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'citroengras',
+    type: GardenTaskType.harvest,
+    months: [6, 7, 8, 9, 10],
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'kaki',
+    type: GardenTaskType.plantOutdoors,
+    months: [3, 4],
+    hint: 'Potboom of jonge boom op beschutte plek.',
+  ),
+  VegetableMonthActivity(
+    vegetableId: 'kaki',
+    type: GardenTaskType.harvest,
+    months: [10, 11],
   ),
 ];
 
@@ -1045,3 +1202,36 @@ const List<String> kMonthNamesNl = [
 ];
 
 const List<String> kWeekdayLabelsNl = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+
+/// Nederlandse maandrange, bijv. "Februari – April".
+String formatPlantMonthRange(Set<int> months) {
+  if (months.isEmpty) return '—';
+  final sorted = months.toList()..sort();
+  if (sorted.length == 12 && sorted.first == 1 && sorted.last == 12) {
+    return 'Het hele jaar';
+  }
+  final parts = <String>[];
+  var start = sorted.first;
+  var prev = sorted.first;
+
+  void flush(int end) {
+    if (start == end) {
+      parts.add(kMonthNamesNl[start]);
+    } else {
+      parts.add('${kMonthNamesNl[start]} – ${kMonthNamesNl[end]}');
+    }
+  }
+
+  for (var i = 1; i < sorted.length; i++) {
+    final m = sorted[i];
+    if (m == prev + 1) {
+      prev = m;
+    } else {
+      flush(prev);
+      start = m;
+      prev = m;
+    }
+  }
+  flush(prev);
+  return parts.join(', ');
+}

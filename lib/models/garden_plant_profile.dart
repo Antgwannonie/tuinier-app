@@ -1,4 +1,7 @@
+import '../data/crop_lifecycle_metadata.dart';
+import 'plant_grow_approach.dart';
 import 'plant_ai_analysis.dart';
+import 'plant_start_method.dart';
 
 /// Waar de plant staat — beïnvloedt groeisnelheid.
 enum GardenLocation {
@@ -16,7 +19,7 @@ extension GardenLocationLabel on GardenLocation {
       case GardenLocation.greenhouse:
         return 'Kas / tunnel';
       case GardenLocation.windowsill:
-        return 'Vensterbank';
+        return 'Binnen huis';
       case GardenLocation.balcony:
         return 'Balkon';
     }
@@ -64,6 +67,22 @@ class GardenPlantProfile {
     this.harvestedPercent = 0,
     this.archivedAt,
     this.moestuinBatchId,
+    this.archivedTuinSpaceId,
+    this.archivedTuinSpaceName,
+    this.plantCount,
+    this.isMoestuinActive = true,
+    this.inactiveReason,
+    this.inactiveSince,
+    this.seasonBeyondCalendar = false,
+    this.awaitingDeathConfirmation = false,
+    this.harvestSessionsThisSeason = 0,
+    this.completedHomeActions = const {},
+    this.pinnedMoestuinActionKey,
+    this.pinnedMoestuinActionAtScanMs,
+    this.plantStartMethod,
+    this.awaitingOutdoorPlanting = false,
+    this.plantGrowApproach,
+    this.userReportedPhase,
   });
 
   final String vegetableId;
@@ -105,9 +124,56 @@ class GardenPlantProfile {
   /// Zelfde id voor alle planten bij «Maak nieuwe moestuin» (herstel in één keer).
   final String? moestuinBatchId;
 
+  /// Moestuin op moment van archiveren (snapshot; blijft ook als tuin later verdwijnt).
+  final String? archivedTuinSpaceId;
+
+  final String? archivedTuinSpaceName;
+
+  /// Aantal fysieke planten van dit gewas (ingevuld bij scan).
+  final int? plantCount;
+
+  /// Of scans en acties nog lopen (false = donkere kaart, geen vervolgstappen).
+  final bool isMoestuinActive;
+
+  /// Waarom de plant niet-actief is (blijft in de moestuin tot verwijderen).
+  final PlantMoestuinInactiveReason? inactiveReason;
+
+  final DateTime? inactiveSince;
+
+  /// Officieel kalenderseizoen voorbij, maar AI ziet nog oogstkans.
+  final bool seasonBeyondCalendar;
+
+  /// AI vermoedt dat de plant dood is — gebruiker moet bevestigen.
+  final bool awaitingDeathConfirmation;
+
+  /// Aantal scans dit seizoen met oogstsignaal.
+  final int harvestSessionsThisSeason;
+
+  /// Afgevinkte home-acties gekoppeld aan scan-tijdstip (sleutel → scan ms).
+  final Map<String, int> completedHomeActions;
+
+  /// Vastgezette hoofdactie op moestuin-kaart / home (tot afvinken of urgentere scan).
+  final String? pinnedMoestuinActionKey;
+
+  /// Scan-tijdstip (ms) waarop [pinnedMoestuinActionKey] is gezet.
+  final int? pinnedMoestuinActionAtScanMs;
+
+  /// Hoe het gewas is gestart (binnen voorzaaien / buiten zaaien / buiten planten).
+  final PlantStartMethod? plantStartMethod;
+
+  /// Na binnen voorzaaien: wacht op buiten uitplanten.
+  final bool awaitingOutdoorPlanting;
+
+  /// Wizard-keuze: zaad, zaailing of volwassen plant (tot eerste plantactie).
+  final PlantGrowApproach? plantGrowApproach;
+
+  /// Groeifase door gebruiker bij toevoegen (tot eerste scan).
+  final PlantAiPhase? userReportedPhase;
+
   bool get isArchived => archivedAt != null;
 
   GardenPlantProfile copyWith({
+    String? vegetableId,
     DateTime? plantedAt,
     GardenLocation? location,
     SunLevel? sunLevel,
@@ -132,9 +198,33 @@ class GardenPlantProfile {
     bool clearArchivedAt = false,
     String? moestuinBatchId,
     bool clearMoestuinBatchId = false,
+    String? archivedTuinSpaceId,
+    String? archivedTuinSpaceName,
+    bool clearArchivedTuinSpace = false,
+    int? plantCount,
+    bool clearPlantCount = false,
+    bool? isMoestuinActive,
+    PlantMoestuinInactiveReason? inactiveReason,
+    bool clearInactive = false,
+    DateTime? inactiveSince,
+    bool clearInactiveSince = false,
+    bool? seasonBeyondCalendar,
+    bool? awaitingDeathConfirmation,
+    int? harvestSessionsThisSeason,
+    Map<String, int>? completedHomeActions,
+    String? pinnedMoestuinActionKey,
+    int? pinnedMoestuinActionAtScanMs,
+    bool clearPinnedMoestuinAction = false,
+    PlantStartMethod? plantStartMethod,
+    bool clearPlantStartMethod = false,
+    bool? awaitingOutdoorPlanting,
+    PlantGrowApproach? plantGrowApproach,
+    bool clearPlantGrowApproach = false,
+    PlantAiPhase? userReportedPhase,
+    bool clearUserReportedPhase = false,
   }) {
     return GardenPlantProfile(
-      vegetableId: vegetableId,
+      vegetableId: vegetableId ?? this.vegetableId,
       plantedAt: plantedAt ?? this.plantedAt,
       location: location ?? this.location,
       sunLevel: sunLevel ?? this.sunLevel,
@@ -163,6 +253,45 @@ class GardenPlantProfile {
       moestuinBatchId: clearMoestuinBatchId
           ? null
           : (moestuinBatchId ?? this.moestuinBatchId),
+      archivedTuinSpaceId: clearArchivedTuinSpace
+          ? null
+          : (archivedTuinSpaceId ?? this.archivedTuinSpaceId),
+      archivedTuinSpaceName: clearArchivedTuinSpace
+          ? null
+          : (archivedTuinSpaceName ?? this.archivedTuinSpaceName),
+      plantCount: clearPlantCount ? null : (plantCount ?? this.plantCount),
+      isMoestuinActive: isMoestuinActive ?? this.isMoestuinActive,
+      inactiveReason:
+          clearInactive ? null : (inactiveReason ?? this.inactiveReason),
+      inactiveSince: clearInactiveSince
+          ? null
+          : (inactiveSince ?? this.inactiveSince),
+      seasonBeyondCalendar:
+          seasonBeyondCalendar ?? this.seasonBeyondCalendar,
+      awaitingDeathConfirmation:
+          awaitingDeathConfirmation ?? this.awaitingDeathConfirmation,
+      harvestSessionsThisSeason:
+          harvestSessionsThisSeason ?? this.harvestSessionsThisSeason,
+      completedHomeActions:
+          completedHomeActions ?? this.completedHomeActions,
+      pinnedMoestuinActionKey: clearPinnedMoestuinAction
+          ? null
+          : (pinnedMoestuinActionKey ?? this.pinnedMoestuinActionKey),
+      pinnedMoestuinActionAtScanMs: clearPinnedMoestuinAction
+          ? null
+          : (pinnedMoestuinActionAtScanMs ??
+              this.pinnedMoestuinActionAtScanMs),
+      plantStartMethod: clearPlantStartMethod
+          ? null
+          : (plantStartMethod ?? this.plantStartMethod),
+      awaitingOutdoorPlanting:
+          awaitingOutdoorPlanting ?? this.awaitingOutdoorPlanting,
+      plantGrowApproach: clearPlantGrowApproach
+          ? null
+          : (plantGrowApproach ?? this.plantGrowApproach),
+      userReportedPhase: clearUserReportedPhase
+          ? null
+          : (userReportedPhase ?? this.userReportedPhase),
     );
   }
 
@@ -206,6 +335,31 @@ class GardenPlantProfile {
         'harvestedPercent': harvestedPercent,
         if (archivedAt != null) 'archivedAt': archivedAt!.toIso8601String(),
         if (moestuinBatchId != null) 'moestuinBatchId': moestuinBatchId,
+        if (archivedTuinSpaceId != null)
+          'archivedTuinSpaceId': archivedTuinSpaceId,
+        if (archivedTuinSpaceName != null)
+          'archivedTuinSpaceName': archivedTuinSpaceName,
+        if (plantCount != null) 'plantCount': plantCount,
+        'isMoestuinActive': isMoestuinActive,
+        if (inactiveReason != null) 'inactiveReason': inactiveReason!.name,
+        if (inactiveSince != null)
+          'inactiveSince': inactiveSince!.toIso8601String(),
+        'seasonBeyondCalendar': seasonBeyondCalendar,
+        'awaitingDeathConfirmation': awaitingDeathConfirmation,
+        'harvestSessionsThisSeason': harvestSessionsThisSeason,
+        if (completedHomeActions.isNotEmpty)
+          'completedHomeActions': completedHomeActions,
+        if (pinnedMoestuinActionKey != null)
+          'pinnedMoestuinActionKey': pinnedMoestuinActionKey,
+        if (pinnedMoestuinActionAtScanMs != null)
+          'pinnedMoestuinActionAtScanMs': pinnedMoestuinActionAtScanMs,
+        if (plantStartMethod != null)
+          'plantStartMethod': plantStartMethod!.name,
+        'awaitingOutdoorPlanting': awaitingOutdoorPlanting,
+        if (plantGrowApproach != null)
+          'plantGrowApproach': plantGrowApproach!.name,
+        if (userReportedPhase != null)
+          'userReportedPhase': userReportedPhase!.name,
       };
 
   factory GardenPlantProfile.fromJson(Map<String, dynamic> json) {
@@ -261,6 +415,45 @@ class GardenPlantProfile {
           ? DateTime.parse(json['archivedAt'] as String)
           : null,
       moestuinBatchId: json['moestuinBatchId'] as String?,
+      archivedTuinSpaceId: json['archivedTuinSpaceId'] as String?,
+      archivedTuinSpaceName: json['archivedTuinSpaceName'] as String?,
+      plantCount: (json['plantCount'] as num?)?.round(),
+      isMoestuinActive: json['isMoestuinActive'] as bool? ?? true,
+      inactiveReason: parsePlantMoestuinInactiveReason(
+        json['inactiveReason'] as String?,
+      ),
+      inactiveSince: json['inactiveSince'] != null
+          ? DateTime.parse(json['inactiveSince'] as String)
+          : null,
+      seasonBeyondCalendar: json['seasonBeyondCalendar'] as bool? ?? false,
+      awaitingDeathConfirmation:
+          json['awaitingDeathConfirmation'] as bool? ?? false,
+      harvestSessionsThisSeason:
+          ((json['harvestSessionsThisSeason'] as num?) ?? 0).toInt(),
+      completedHomeActions: _parseCompletedHomeActions(
+        json['completedHomeActions'],
+      ),
+      pinnedMoestuinActionKey: json['pinnedMoestuinActionKey'] as String?,
+      pinnedMoestuinActionAtScanMs:
+          (json['pinnedMoestuinActionAtScanMs'] as num?)?.toInt(),
+      plantStartMethod: plantStartMethodFromName(
+        json['plantStartMethod'] as String?,
+      ),
+      awaitingOutdoorPlanting:
+          json['awaitingOutdoorPlanting'] as bool? ?? false,
+      plantGrowApproach: plantGrowApproachFromName(
+        json['plantGrowApproach'] as String?,
+      ),
+      userReportedPhase: parsePlantAiPhase(
+        json['userReportedPhase'] as String?,
+      ),
     );
   }
+}
+
+Map<String, int> _parseCompletedHomeActions(dynamic raw) {
+  if (raw is! Map) return const {};
+  return raw.map(
+    (key, value) => MapEntry(key.toString(), (value as num).toInt()),
+  );
 }

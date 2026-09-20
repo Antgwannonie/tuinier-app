@@ -51,8 +51,8 @@ Future<bool> confirmAndStartNewMoestuin(
             ),
             const SizedBox(height: 8),
             Text(
-              'Ze blijven bewaard in History ($year), met scans en gegevens. '
-              'Daar kun je dezelfde planten later opnieuw in Mijn moestuin zetten.',
+              'Alleen planten met een scan, geoogst gewas of uitgebloeide planten '
+              'gaan naar History ($year). De rest verdwijnt.',
               style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.35,
@@ -95,9 +95,11 @@ Future<bool> confirmAndStartNewMoestuin(
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          result.count == 1
-              ? '1 plant opgeslagen in History — je moestuin is nu leeg'
-              : '${result.count} planten opgeslagen in History — je moestuin is nu leeg',
+          result.count == 0
+              ? 'Moestuin geleegd, geen planten kwamen in History'
+              : result.count == 1
+                  ? '1 plant in History, je moestuin is nu leeg'
+                  : '${result.count} planten in History, je moestuin is nu leeg',
         ),
       ),
     );

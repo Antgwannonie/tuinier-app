@@ -556,6 +556,61 @@ img.ColorRgb8 _skyFillColor(img.Image source) {
   );
 }
 
+img.ColorRgb8 _edgeFillColor(img.Image source) {
+  var r = 0, g = 0, b = 0, n = 0;
+
+  void sample(int x, int y) {
+    final p = source.getPixel(
+      x.clamp(0, source.width - 1),
+      y.clamp(0, source.height - 1),
+    );
+    r += p.r.toInt();
+    g += p.g.toInt();
+    b += p.b.toInt();
+    n++;
+  }
+
+  for (var x = 0; x < source.width; x += 4) {
+    sample(x, 0);
+    sample(x, source.height - 1);
+  }
+  for (var y = 0; y < source.height; y += 4) {
+    sample(0, y);
+    sample(source.width - 1, y);
+  }
+
+  if (n == 0) return img.ColorRgb8(40, 72, 38);
+  return img.ColorRgb8(
+    (r ~/ n).clamp(0, 255),
+    (g ~/ n).clamp(0, 255),
+    (b ~/ n).clamp(0, 255),
+  );
+}
+
+/// Vierkante kaart: hele plant zichtbaar op doorlopende achtergrond (geen witte rand).
+img.Image composeOpaqueSquareCard(
+  img.Image source, {
+  int size = 1024,
+  double plantFill = 0.88,
+}) {
+  final canvas = img.Image(width: size, height: size, numChannels: 3);
+  img.fill(canvas, color: _edgeFillColor(source));
+
+  final fill = plantFill.clamp(0.5, 1.0);
+  final scale =
+      math.min(size / source.width, size / source.height) * fill;
+  final fw = (source.width * scale).round().clamp(1, size);
+  final fh = (source.height * scale).round().clamp(1, size);
+  final plant = img.copyResize(source, width: fw, height: fh);
+  img.compositeImage(
+    canvas,
+    plant,
+    dstX: (size - fw) ~/ 2,
+    dstY: (size - fh) ~/ 2,
+  );
+  return canvas;
+}
+
 /// Verwijdert witte/lichte randen (AI-export met letterbox).
 img.Image trimLightBorders(img.Image source, {int threshold = 235}) {
   final w = source.width;

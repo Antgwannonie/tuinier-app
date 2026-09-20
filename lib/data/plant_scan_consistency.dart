@@ -16,14 +16,18 @@ String _formatScanDate(DateTime d) =>
 /// Prompttekst wanneer er al een eerdere AI-scan is.
 String buildPreviousScanPromptSection(PlantAiAnalysis previous) {
   final days = previous.daysUntilHarvest;
+  final bloomDays = previous.daysUntilBloom;
   final daysLine = days == null
       ? 'dagen tot oogst: onbekend / al rijp'
       : 'dagen tot oogst: $days';
+  final bloomLine = bloomDays == null
+      ? ''
+      : '\n- Dagen tot bloei: $bloomDays';
   return '''
-BELANGRIJK — vergelijk eerst met de VORIGE scan van dezezelfde plant:
+BELANGRIJK: vergelijk eerst met de VORIGE scan van dezezelfde plant:
 - Datum vorige scan: ${_formatScanDate(previous.scannedAt)}
 - Fase: ${previous.phase.name} (${previous.phaseLabel})
-- $daysLine
+- $daysLine$bloomLine
 - Oogstvenster: ${previous.harvestWindowLabel}
 - Vertrouwen: ${previous.confidencePercent}%
 - Advies vorige keer: ${previous.advice}
@@ -34,7 +38,7 @@ ${previous.insight != null ? '''
 ''' : ''}
 
 Stap 1: Bekijk de nieuwe foto. Is dit dezelfde plant op dezelfde plek, ZONDER zichtbare groei of faseverschil t.o.v. de vorige scan?
-Stap 2a: Als JA (zelfde stadium) → zet "matchesPreviousScan": true. Gebruik dezelfde phase en phaseLabel. Voor daysUntilHarvest: neem de vorige waarde en trek het aantal kalenderdagen af sinds de vorige scan (minimaal 0). Gebruik hetzelfde harvestWindowLabel en hetzelfde advies (max. 1 kleine zin toevoegen als nodig).
+Stap 2a: Als JA (zelfde stadium) → zet "matchesPreviousScan": true. Gebruik dezelfde phase en phaseLabel. Voor daysUntilHarvest: neem de vorige waarde en trek het aantal kalenderdagen af sinds de vorige scan (minimaal 0). Voor daysUntilBloom: idem. Gebruik hetzelfde harvestWindowLabel en hetzelfde advies (max. 1 kleine zin toevoegen als nodig).
 Stap 2b: Als NEE (duidelijk andere fase of andere plant) → zet "matchesPreviousScan": false en geef een nieuwe volledige beoordeling.
 Wees streng: bij twijfel tussen bijna hetzelfde → matchesPreviousScan true en weinig wijzigen.
 Vergelijk ook gezondheid met vorige scan: is er herstel, achteruitgang of gelijk?
@@ -89,6 +93,16 @@ PlantAiAnalysis reconcileWithPreviousScan({
     stabilizedDays = incoming.daysUntilHarvest;
   }
 
+  final prevBloomDays = previous.daysUntilBloom;
+  int? stabilizedBloomDays;
+  if (previous.phase == PlantAiPhase.flowering) {
+    stabilizedBloomDays = 0;
+  } else if (prevBloomDays != null) {
+    stabilizedBloomDays = (prevBloomDays - elapsed).clamp(0, 365);
+  } else {
+    stabilizedBloomDays = incoming.daysUntilBloom;
+  }
+
   final keepAdvice = sameImage && elapsed <= 1;
   final advice = keepAdvice
       ? previous.advice
@@ -107,6 +121,7 @@ PlantAiAnalysis reconcileWithPreviousScan({
     phase: previous.phase,
     phaseLabel: previous.phaseLabel,
     daysUntilHarvest: stabilizedDays,
+    daysUntilBloom: stabilizedBloomDays,
     harvestWindowLabel: previous.harvestWindowLabel,
     confidencePercent: previous.confidencePercent,
     advice: advice,

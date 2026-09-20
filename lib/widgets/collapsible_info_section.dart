@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tuinier_colors.dart';
+
 /// Uitklapbaar infoblok (zelfde stijl als Zaaien & oogsten).
 class CollapsibleInfoSection extends StatefulWidget {
   const CollapsibleInfoSection({
@@ -9,6 +11,7 @@ class CollapsibleInfoSection extends StatefulWidget {
     required this.child,
     this.subtitle,
     this.initiallyExpanded = false,
+    this.solidWhite = false,
   });
 
   final String title;
@@ -16,6 +19,7 @@ class CollapsibleInfoSection extends StatefulWidget {
   final Widget child;
   final String? subtitle;
   final bool initiallyExpanded;
+  final bool solidWhite;
 
   @override
   State<CollapsibleInfoSection> createState() => _CollapsibleInfoSectionState();
@@ -34,15 +38,31 @@ class _CollapsibleInfoSectionState extends State<CollapsibleInfoSection> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final cs = t.colorScheme;
+    final surfaceColor = widget.solidWhite
+        ? TuinierColors.white
+        : cs.surfaceContainerHighest.withValues(alpha: 0.45);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
+        child: Container(
+          decoration: widget.solidWhite
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                )
+              : null,
+          child: Column(
+            children: [
             InkWell(
               onTap: () => setState(() => _expanded = !_expanded),
               child: Padding(
@@ -113,6 +133,7 @@ class _CollapsibleInfoSectionState extends State<CollapsibleInfoSection> {
           ],
         ),
       ),
+    ),
     );
   }
 }

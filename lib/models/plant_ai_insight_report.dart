@@ -283,16 +283,26 @@ class AiRecommendedAction {
   const AiRecommendedAction({
     required this.title,
     this.description,
+    this.reasonSummary,
+    this.linkedObservationTitle,
+    this.steps = const [],
     this.priority = AiPriority.medium,
   });
 
   final String title;
   final String? description;
+  final String? reasonSummary;
+  final String? linkedObservationTitle;
+  final List<String> steps;
   final AiPriority priority;
 
   Map<String, dynamic> toJson() => {
         'title': title,
         if (description != null) 'description': description,
+        if (reasonSummary != null) 'reasonSummary': reasonSummary,
+        if (linkedObservationTitle != null)
+          'linkedObservationTitle': linkedObservationTitle,
+        if (steps.isNotEmpty) 'steps': steps,
         'priority': priority.name,
       };
 
@@ -300,8 +310,47 @@ class AiRecommendedAction {
     return AiRecommendedAction(
       title: json['title'] as String? ?? '',
       description: json['description'] as String?,
+      reasonSummary: json['reasonSummary'] as String?,
+      linkedObservationTitle: json['linkedObservationTitle'] as String?,
+      steps: (json['steps'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .where((s) => s.trim().isNotEmpty)
+          .toList(),
       priority:
           parseAiPriority(json['priority'] as String?) ?? AiPriority.medium,
+    );
+  }
+}
+
+/// Eén zichtbare bevinding op de scanfoto (AI Observaties-kaart).
+class AiVisualObservation {
+  const AiVisualObservation({
+    required this.title,
+    required this.description,
+    required this.scorePercent,
+    this.kind,
+  });
+
+  final String title;
+  final String description;
+  final int scorePercent;
+  /// leaf|flower|fruit|pest|water|disease|damage|growth|other
+  final String? kind;
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'description': description,
+        'scorePercent': scorePercent,
+        if (kind != null) 'kind': kind,
+      };
+
+  factory AiVisualObservation.fromJson(Map<String, dynamic> json) {
+    return AiVisualObservation(
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      scorePercent:
+          ((json['scorePercent'] as num?)?.toInt() ?? 70).clamp(0, 100),
+      kind: json['kind'] as String?,
     );
   }
 }
@@ -331,8 +380,73 @@ class AiCoachTaskSuggestion {
     return AiCoachTaskSuggestion(
       title: json['title'] as String? ?? '',
       body: json['body'] as String?,
-      dueInDays: (json['dueInDays'] as num?)?.toInt() ?? 0,
+      dueInDays: 0,
       kind: json['kind'] as String? ?? 'check',
+    );
+  }
+}
+
+/// Soort checklist-beoordeling per scan.
+enum ScanAssessmentKind {
+  task,
+  letOp,
+  positive;
+
+  static ScanAssessmentKind? parse(String? raw) {
+    if (raw == null) return null;
+    final n = raw.trim().toLowerCase().replaceAll('-', '_');
+    return switch (n) {
+      'task' || 'taak' => ScanAssessmentKind.task,
+      'let_op' || 'letop' || 'info' => ScanAssessmentKind.letOp,
+      'positive' || 'positief' => ScanAssessmentKind.positive,
+      _ => null,
+    };
+  }
+}
+
+/// Checklist-beoordeling: taak, let-op info, of positieve bevinding.
+class PlantScanAssessment {
+  const PlantScanAssessment({
+    required this.taskId,
+    required this.kind,
+    required this.title,
+    required this.description,
+    this.scorePercent,
+    this.steps = const [],
+    this.visibleOnPhoto = false,
+  });
+
+  final String taskId;
+  final ScanAssessmentKind kind;
+  final String title;
+  final String description;
+  final int? scorePercent;
+  final List<String> steps;
+  final bool visibleOnPhoto;
+
+  Map<String, dynamic> toJson() => {
+        'taskId': taskId,
+        'kind': kind == ScanAssessmentKind.letOp ? 'let_op' : kind.name,
+        'title': title,
+        'description': description,
+        if (scorePercent != null) 'scorePercent': scorePercent,
+        if (steps.isNotEmpty) 'steps': steps,
+        'visibleOnPhoto': visibleOnPhoto,
+      };
+
+  factory PlantScanAssessment.fromJson(Map<String, dynamic> json) {
+    final kindRaw = json['kind'] as String?;
+    return PlantScanAssessment(
+      taskId: json['taskId'] as String? ?? '',
+      kind: ScanAssessmentKind.parse(kindRaw) ?? ScanAssessmentKind.task,
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      scorePercent: (json['scorePercent'] as num?)?.toInt()?.clamp(0, 100),
+      steps: (json['steps'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .where((s) => s.trim().isNotEmpty)
+          .toList(),
+      visibleOnPhoto: json['visibleOnPhoto'] as bool? ?? false,
     );
   }
 }
@@ -343,6 +457,8 @@ class PlantAiInsightReport {
     required this.summary,
     required this.healthScore,
     required this.growthScore,
+    this.harvestChancePercent,
+    this.harvestChanceNote,
     this.riskLevel = AiRiskLevel.low,
     this.priority = AiPriority.low,
     this.pests = const [],
@@ -353,6 +469,11 @@ class PlantAiInsightReport {
     this.nutrients = const [],
     this.growthPhaseDetail,
     this.harvestReady,
+    this.moreHarvestExpectedThisSeason,
+    this.seasonHarvestComplete,
+    this.harvestAlternativeTips = const [],
+    this.plantLikelyDead,
+    this.deadPlantCheckSteps = const [],
     this.ripenessNote,
     this.floweringStatus,
     this.floweringNote,
@@ -368,11 +489,28 @@ class PlantAiInsightReport {
     this.problems = const [],
     this.recommendedActions = const [],
     this.coachTasks = const [],
+    this.moduleConfidence,
+    this.scanComparisonBullets = const [],
+    this.leafAnalysisNote,
+    this.strengths = const [],
+    this.attentionPoints = const [],
+    this.environmentNote,
+    this.weekFocus,
+    this.outlookBullets = const [],
+    this.coachWeekPlan = const [],
+    this.didYouKnow,
+    this.fruitSizeVsMarket,
+    this.visualObservations = const [],
+    this.scanAssessments = const [],
   });
 
   final String summary;
   final int healthScore;
   final int growthScore;
+  /// AI-inschatting: kans (0-100) dat oogst nog haalbaar is op basis van de foto.
+  final int? harvestChancePercent;
+  /// Korte uitleg waarom (zichtbare koppen/vruchten, volwassenheid, gezondheid).
+  final String? harvestChanceNote;
   final AiRiskLevel riskLevel;
   final AiPriority priority;
   final List<AiIssueFinding> pests;
@@ -383,6 +521,11 @@ class PlantAiInsightReport {
   final List<AiNutrientIssue> nutrients;
   final String? growthPhaseDetail;
   final bool? harvestReady;
+  final bool? moreHarvestExpectedThisSeason;
+  final bool? seasonHarvestComplete;
+  final List<String> harvestAlternativeTips;
+  final bool? plantLikelyDead;
+  final List<String> deadPlantCheckSteps;
   final String? ripenessNote;
   final AiFloweringStatus? floweringStatus;
   final String? floweringNote;
@@ -398,6 +541,19 @@ class PlantAiInsightReport {
   final List<String> problems;
   final List<AiRecommendedAction> recommendedActions;
   final List<AiCoachTaskSuggestion> coachTasks;
+  final Map<String, int>? moduleConfidence;
+  final List<String> scanComparisonBullets;
+  final String? leafAnalysisNote;
+  final List<String> strengths;
+  final List<String> attentionPoints;
+  final String? environmentNote;
+  final String? weekFocus;
+  final List<String> outlookBullets;
+  final List<String> coachWeekPlan;
+  final String? didYouKnow;
+  final String? fruitSizeVsMarket;
+  final List<AiVisualObservation> visualObservations;
+  final List<PlantScanAssessment> scanAssessments;
 
   bool get hasUrgentFindings =>
       riskLevel == AiRiskLevel.high ||
@@ -417,6 +573,9 @@ class PlantAiInsightReport {
         'summary': summary,
         'healthScore': healthScore,
         'growthScore': growthScore,
+        if (harvestChancePercent != null)
+          'harvestChancePercent': harvestChancePercent,
+        if (harvestChanceNote != null) 'harvestChanceNote': harvestChanceNote,
         'riskLevel': riskLevel.name,
         'priority': priority.name,
         'pests': pests.map((e) => e.toJson()).toList(),
@@ -427,6 +586,15 @@ class PlantAiInsightReport {
         'nutrients': nutrients.map((e) => e.toJson()).toList(),
         if (growthPhaseDetail != null) 'growthPhaseDetail': growthPhaseDetail,
         if (harvestReady != null) 'harvestReady': harvestReady,
+        if (moreHarvestExpectedThisSeason != null)
+          'moreHarvestExpectedThisSeason': moreHarvestExpectedThisSeason,
+        if (seasonHarvestComplete != null)
+          'seasonHarvestComplete': seasonHarvestComplete,
+        if (harvestAlternativeTips.isNotEmpty)
+          'harvestAlternativeTips': harvestAlternativeTips,
+        if (plantLikelyDead != null) 'plantLikelyDead': plantLikelyDead,
+        if (deadPlantCheckSteps.isNotEmpty)
+          'deadPlantCheckSteps': deadPlantCheckSteps,
         if (ripenessNote != null) 'ripenessNote': ripenessNote,
         if (floweringStatus != null) 'floweringStatus': floweringStatus!.name,
         if (floweringNote != null) 'floweringNote': floweringNote,
@@ -447,6 +615,24 @@ class PlantAiInsightReport {
         'recommendedActions':
             recommendedActions.map((e) => e.toJson()).toList(),
         'coachTasks': coachTasks.map((e) => e.toJson()).toList(),
+        if (moduleConfidence != null && moduleConfidence!.isNotEmpty)
+          'moduleConfidence': moduleConfidence,
+        if (scanComparisonBullets.isNotEmpty)
+          'scanComparisonBullets': scanComparisonBullets,
+        if (leafAnalysisNote != null) 'leafAnalysisNote': leafAnalysisNote,
+        if (strengths.isNotEmpty) 'strengths': strengths,
+        if (attentionPoints.isNotEmpty) 'attentionPoints': attentionPoints,
+        if (environmentNote != null) 'environmentNote': environmentNote,
+        if (weekFocus != null) 'weekFocus': weekFocus,
+        if (outlookBullets.isNotEmpty) 'outlookBullets': outlookBullets,
+        if (coachWeekPlan.isNotEmpty) 'coachWeekPlan': coachWeekPlan,
+        if (didYouKnow != null) 'didYouKnow': didYouKnow,
+        if (fruitSizeVsMarket != null) 'fruitSizeVsMarket': fruitSizeVsMarket,
+        if (visualObservations.isNotEmpty)
+          'visualObservations':
+              visualObservations.map((e) => e.toJson()).toList(),
+        if (scanAssessments.isNotEmpty)
+          'scanAssessments': scanAssessments.map((e) => e.toJson()).toList(),
       };
 
   factory PlantAiInsightReport.fromJson(Map<String, dynamic> json) {
@@ -463,6 +649,9 @@ class PlantAiInsightReport {
       summary: json['summary'] as String? ?? '',
       healthScore: ((json['healthScore'] as num?)?.toInt() ?? 70).clamp(0, 100),
       growthScore: ((json['growthScore'] as num?)?.toInt() ?? 70).clamp(0, 100),
+      harvestChancePercent:
+          (json['harvestChancePercent'] as num?)?.toInt()?.clamp(0, 100),
+      harvestChanceNote: json['harvestChanceNote'] as String?,
       riskLevel:
           parseAiRiskLevel(json['riskLevel'] as String?) ?? AiRiskLevel.low,
       priority:
@@ -479,6 +668,18 @@ class PlantAiInsightReport {
           const [],
       growthPhaseDetail: json['growthPhaseDetail'] as String?,
       harvestReady: json['harvestReady'] as bool?,
+      moreHarvestExpectedThisSeason:
+          json['moreHarvestExpectedThisSeason'] as bool?,
+      seasonHarvestComplete: json['seasonHarvestComplete'] as bool?,
+      harvestAlternativeTips: (json['harvestAlternativeTips'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      plantLikelyDead: json['plantLikelyDead'] as bool?,
+      deadPlantCheckSteps: (json['deadPlantCheckSteps'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       ripenessNote: json['ripenessNote'] as String?,
       floweringStatus:
           parseAiFloweringStatus(json['floweringStatus'] as String?),
@@ -509,6 +710,54 @@ class PlantAiInsightReport {
               .map(AiCoachTaskSuggestion.fromJson)
               .toList() ??
           const [],
+      moduleConfidence: _parseModuleConfidence(json['moduleConfidence']),
+      scanComparisonBullets: (json['scanComparisonBullets'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      leafAnalysisNote: json['leafAnalysisNote'] as String?,
+      strengths: (json['strengths'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      attentionPoints: (json['attentionPoints'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      environmentNote: json['environmentNote'] as String?,
+      weekFocus: json['weekFocus'] as String?,
+      outlookBullets: (json['outlookBullets'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      coachWeekPlan: (json['coachWeekPlan'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      didYouKnow: json['didYouKnow'] as String?,
+      fruitSizeVsMarket: json['fruitSizeVsMarket'] as String?,
+      visualObservations: (json['visualObservations'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(AiVisualObservation.fromJson)
+              .where((o) => o.title.trim().isNotEmpty)
+              .toList() ??
+          const [],
+      scanAssessments: (json['scanAssessments'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(PlantScanAssessment.fromJson)
+              .where((a) => a.taskId.trim().isNotEmpty && a.title.trim().isNotEmpty)
+              .toList() ??
+          const [],
     );
   }
+}
+
+Map<String, int>? _parseModuleConfidence(dynamic raw) {
+  if (raw is! Map) return null;
+  final out = <String, int>{};
+  for (final entry in raw.entries) {
+    final v = entry.value;
+    if (v is num) out[entry.key.toString()] = v.toInt().clamp(0, 100);
+  }
+  return out.isEmpty ? null : out;
 }

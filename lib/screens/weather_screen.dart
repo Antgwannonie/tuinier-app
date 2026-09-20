@@ -1,18 +1,39 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../data/ai_settings_store.dart';
+import '../data/garden_profile_store.dart';
 import '../data/garden_weather_advice.dart';
-import '../data/weather_notification_service.dart';
+import '../data/garden_weather_coach_service.dart';
+import '../data/garden_weather_dashboard.dart';
+import '../data/my_garden_store.dart';
+import '../data/vegetable_repository.dart';
+import '../data/weather_notifications_sync.dart';
 import '../data/weather_prefs_store.dart';
 import '../data/weather_service.dart';
+import '../models/vegetable.dart';
+import '../theme/tuinier_colors.dart';
+import '../widgets/weather/garden_weather_dashboard_view.dart';
 
-/// Weer voor de moestuin + tuinadvies en meldingen.
+/// AI moestuin-weerdashboard.
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({
     super.key,
     required this.weatherPrefs,
+    required this.aiSettings,
+    required this.gardenStore,
+    required this.profileStore,
+    required this.repository,
+    this.embedded = false,
   });
 
   final WeatherPrefsStore weatherPrefs;
+  final AiSettingsStore aiSettings;
+  final MyGardenStore gardenStore;
+  final GardenProfileStore profileStore;
+  final VegetableRepository repository;
+  final bool embedded;
 
   @override
   State<WeatherScreen> createState() => _WeatherScreenState();
@@ -21,21 +42,38 @@ class WeatherScreen extends StatefulWidget {
 class _WeatherScreenState extends State<WeatherScreen> {
   final WeatherService _service = WeatherService();
   WeatherForecast? _forecast;
-  List<GardenWeatherTip> _tips = [];
+  GardenWeatherDashboard? _dashboard;
   bool _loading = true;
+  bool _coachLoading = false;
   String? _error;
+  int _dashboardRequestId = 0;
 
   @override
   void initState() {
     super.initState();
     widget.weatherPrefs.addListener(_load);
+    widget.gardenStore.addListener(_load);
+    widget.profileStore.addListener(_load);
     _load();
   }
 
   @override
   void dispose() {
     widget.weatherPrefs.removeListener(_load);
+    widget.gardenStore.removeListener(_load);
+    widget.profileStore.removeListener(_load);
     super.dispose();
+  }
+
+  List<Vegetable> _plantedCrops() {
+    final out = <Vegetable>[];
+    for (final id in widget.gardenStore.ids) {
+      if (!(widget.profileStore.profileFor(id)?.isPlanted ?? false)) continue;
+      final veg = widget.repository.byId(id);
+      if (veg != null) out.add(veg);
+    }
+    out.sort((a, b) => a.nameNl.compareTo(b.nameNl));
+    return out;
   }
 
   Future<void> _load() async {
@@ -50,22 +88,140 @@ class _WeatherScreenState extends State<WeatherScreen> {
         placeName: widget.weatherPrefs.placeName,
       );
       final tips = gardenTipsFromForecast(forecast);
-      await WeatherNotificationService.instance.maybeNotify(
-        forecast: forecast,
-        enabled: widget.weatherPrefs.notificationsEnabled,
-      );
       if (!mounted) return;
       setState(() {
         _forecast = forecast;
-        _tips = tips;
         _loading = false;
       });
+      unawaited(_loadDashboard(forecast: forecast, tips: tips));
+      unawaited(
+        syncWeatherNotifications(
+          weatherPrefs: widget.weatherPrefs,
+          aiSettings: widget.aiSettings,
+          gardenStore: widget.gardenStore,
+          profileStore: widget.profileStore,
+          repository: widget.repository,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadDashboard({
+    required WeatherForecast forecast,
+    required List<GardenWeatherTip> tips,
+  }) async {
+    final requestId = ++_dashboardRequestId;
+    final crops = _plantedCrops();
+    final base = buildRuleBasedGardenWeatherDashboard(
+      forecast: forecast,
+      tips: tips,
+      plantedCrops: crops,
+    );
+    final hasAi = widget.aiSettings.apiKey.trim().isNotEmpty;
+
+    if (hasAi) {
+      GardenWeatherCoachService.clearCache();
+    }
+
+    setState(() {
+      _dashboard = base;
+      _coachLoading = hasAi;
+    });
+
+    if (!hasAi) return;
+
+    unawaited(_loadAiCoach(
+      requestId: requestId,
+      forecast: forecast,
+      tips: tips,
+      crops: crops,
+      base: base,
+    ));
+    unawaited(_loadAiDashboardDetails(
+      requestId: requestId,
+      forecast: forecast,
+      tips: tips,
+      crops: crops,
+    ));
+  }
+
+  Future<void> _loadAiCoach({
+    required int requestId,
+    required WeatherForecast forecast,
+    required List<GardenWeatherTip> tips,
+    required List<Vegetable> crops,
+    required GardenWeatherDashboard base,
+  }) async {
+    try {
+      final coach = await GardenWeatherCoachService(
+        apiKey: widget.aiSettings.apiKey,
+      ).coachForGarden(
+        forecast: forecast,
+        tips: tips,
+        plantedCropNames: crops.map((v) => v.nameNl).toList(),
+        gardenName: widget.gardenStore.activeSpace?.name,
+      );
+      if (!mounted || requestId != _dashboardRequestId) return;
+      final current = _dashboard ?? base;
+      setState(() {
+        _dashboard = GardenWeatherDashboard(
+          scoreToday: base.scoreToday,
+          coachSummary: coach.summary,
+          recommendedActions: coach.actionLines.isNotEmpty
+              ? coach.actionLines
+              : base.recommendedActions,
+          impacts: current.impacts,
+          todoCards: current.todoCards,
+          risks: current.risks,
+          cropAdvices: current.cropAdvices,
+          usedAi: coach.usedAi,
+        );
+        _coachLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _dashboardRequestId) return;
+      setState(() => _coachLoading = false);
+    }
+  }
+
+  Future<void> _loadAiDashboardDetails({
+    required int requestId,
+    required WeatherForecast forecast,
+    required List<GardenWeatherTip> tips,
+    required List<Vegetable> crops,
+  }) async {
+    try {
+      final full = await GardenWeatherDashboardService(
+        apiKey: widget.aiSettings.apiKey,
+      ).build(
+        forecast: forecast,
+        tips: tips,
+        plantedCrops: crops,
+        gardenName: widget.gardenStore.activeSpace?.name,
+      );
+      if (!mounted || requestId != _dashboardRequestId || !full.usedAi) return;
+      final current = _dashboard;
+      if (current == null) return;
+      setState(() {
+        _dashboard = GardenWeatherDashboard(
+          scoreToday: current.scoreToday,
+          coachSummary: current.coachSummary,
+          recommendedActions: current.recommendedActions,
+          impacts: full.impacts,
+          todoCards: full.todoCards,
+          risks: full.risks,
+          cropAdvices: full.cropAdvices,
+          usedAi: current.usedAi,
+        );
+      });
+    } catch (_) {
+      // Regelgebaseerde gewassen/risico's blijven staan.
     }
   }
 
@@ -105,234 +261,65 @@ class _WeatherScreenState extends State<WeatherScreen> {
       lon: picked.lon,
       placeName: picked.name,
     );
-    await _load();
+  }
+
+  Widget _buildBody(ThemeData t) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Weer kon niet laden', style: t.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(_error!, textAlign: TextAlign.center, style: t.textTheme.bodySmall),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: _load, child: const Text('Opnieuw proberen')),
+          ],
+        ),
+      );
+    }
+
+    final content = GardenWeatherDashboardView(
+      forecast: _forecast!,
+      dashboard: _dashboard,
+      coachLoading: _coachLoading,
+      placeName: widget.weatherPrefs.placeName,
+      onPickCity: _pickCity,
+    );
+
+    if (widget.embedded) return content;
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [content],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
+    if (widget.embedded) return _buildBody(Theme.of(context));
 
     return Scaffold(
+      backgroundColor: TuinierColors.background,
       appBar: AppBar(
-        title: const Text('Weer & tuin'),
+        title: const Text('Weer'),
+        backgroundColor: TuinierColors.background,
         actions: [
           IconButton(
             onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Verversen',
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Weer kon niet laden',
-                          style: t.textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(_error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: _load,
-                          child: const Text('Opnieuw proberen'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _pickCity,
-                        icon: const Icon(Icons.place_outlined),
-                        label: Text(widget.weatherPrefs.placeName),
-                        style: OutlinedButton.styleFrom(
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                      if (_forecast != null) ...[
-                        const SizedBox(height: 12),
-                        _CurrentCard(forecast: _forecast!),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Komende dagen',
-                          style: t.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 118,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _forecast!.daily.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 8),
-                            itemBuilder: (_, i) {
-                              final d = _forecast!.daily[i];
-                              return _DayChip(day: d);
-                            },
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Weer-meldingen'),
-                        subtitle: const Text(
-                          'Bij hitte, vorst, storm of veel regen (max. 1× per dag)',
-                        ),
-                        value: widget.weatherPrefs.notificationsEnabled,
-                        onChanged: widget.weatherPrefs.setNotificationsEnabled,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Wat te doen in de tuin',
-                        style: t.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ..._tips.map((tip) => _TipCard(tip: tip)),
-                    ],
-                  ),
-                ),
-    );
-  }
-}
-
-class _CurrentCard extends StatelessWidget {
-  const _CurrentCard({required this.forecast});
-
-  final WeatherForecast forecast;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Text(
-              weatherEmoji(forecast.currentCode),
-              style: const TextStyle(fontSize: 48),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${forecast.currentTempC.round()}°C',
-                    style: t.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(weatherCodeLabelNl(forecast.currentCode)),
-                  Text(
-                    'Wind ${forecast.currentWindKmh.round()} km/u',
-                    style: t.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DayChip extends StatelessWidget {
-  const _DayChip({required this.day});
-
-  final DailyWeather day;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final weekdays = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
-    final label = weekdays[day.date.weekday - 1];
-
-    return Container(
-      width: 88,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: t.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, style: t.textTheme.labelLarge),
-          Text(
-            weatherEmoji(day.code),
-            style: const TextStyle(fontSize: 22),
-          ),
-          Text(
-            '${day.maxTempC.round()}° / ${day.minTempC.round()}°',
-            style: t.textTheme.labelSmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TipCard extends StatelessWidget {
-  const _TipCard({required this.tip});
-
-  final GardenWeatherTip tip;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final Color bg;
-    final Color border;
-    switch (tip.level) {
-      case GardenWeatherLevel.ok:
-        bg = t.colorScheme.primaryContainer.withValues(alpha: 0.35);
-        border = t.colorScheme.primary.withValues(alpha: 0.3);
-      case GardenWeatherLevel.watch:
-        bg = Colors.orange.withValues(alpha: 0.12);
-        border = Colors.orange.withValues(alpha: 0.45);
-      case GardenWeatherLevel.alert:
-        bg = t.colorScheme.errorContainer.withValues(alpha: 0.45);
-        border = t.colorScheme.error.withValues(alpha: 0.5);
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: bg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: border),
-        ),
-        child: ListTile(
-          leading: Icon(tip.icon, color: t.colorScheme.onSurface),
-          title: Text(
-            tip.title,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(tip.body),
-        ),
-      ),
+      body: _buildBody(Theme.of(context)),
     );
   }
 }

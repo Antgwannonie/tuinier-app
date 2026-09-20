@@ -4,6 +4,7 @@ import '../data/calendar_display_prefs_store.dart';
 import '../data/my_garden_store.dart';
 import '../data/vegetable_image_info.dart';
 import '../data/vegetable_repository.dart';
+import '../models/vegetable.dart';
 
 /// Instellingen voor welke gewassen in de plantkalender staan.
 Future<void> showCalendarFilterSheet({
@@ -11,6 +12,7 @@ Future<void> showCalendarFilterSheet({
   required CalendarDisplayPrefsStore prefs,
   required VegetableRepository repository,
   required MyGardenStore gardenStore,
+  bool gardenOnly = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -26,6 +28,7 @@ Future<void> showCalendarFilterSheet({
         prefs: prefs,
         repository: repository,
         gardenStore: gardenStore,
+        gardenOnly: gardenOnly,
       ),
     ),
   );
@@ -37,12 +40,14 @@ class _CalendarFilterSheet extends StatefulWidget {
     required this.prefs,
     required this.repository,
     required this.gardenStore,
+    this.gardenOnly = false,
   });
 
   final ScrollController scrollController;
   final CalendarDisplayPrefsStore prefs;
   final VegetableRepository repository;
   final MyGardenStore gardenStore;
+  final bool gardenOnly;
 
   @override
   State<_CalendarFilterSheet> createState() => _CalendarFilterSheetState();
@@ -60,65 +65,89 @@ class _CalendarFilterSheetState extends State<_CalendarFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final vegetables = widget.repository.all;
+    final gardenVegetables = <Vegetable>[
+      for (final id in widget.gardenStore.ids)
+        if (widget.repository.byId(id) case final veg?) veg,
+    ];
+    // Planner: alleen moestuinplanten. Anders: hele database voor keuze.
+    final selectable =
+        widget.gardenOnly ? gardenVegetables : widget.repository.all;
 
     return ListView(
       controller: widget.scrollController,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       children: [
         Text(
-          'Kalender weergave',
+          widget.gardenOnly ? 'Planner weergave' : 'Kalender weergave',
           style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Text(
-          'Kies welke gewassen je in de kalender wilt zien. Zo blijft het overzichtelijk.',
+          widget.gardenOnly
+              ? 'De planner toont alleen gewassen uit jouw moestuin.'
+              : 'Kies welke gewassen je in de kalender wilt zien. Zo blijft het overzichtelijk.',
           style: t.textTheme.bodyMedium?.copyWith(
             color: t.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 16),
-        Text('Weergave', style: t.textTheme.titleSmall),
-        RadioListTile<CalendarViewMode>(
-          title: const Text('Mijn moestuin'),
-          subtitle: Text(
-            widget.gardenStore.isEmpty
-                ? 'Geen planten gekozen — dan tonen we alles'
-                : '${widget.gardenStore.count} plant(en) uit je moestuin',
+        if (widget.gardenOnly) ...[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.yard_outlined,
+              color: t.colorScheme.primary,
+            ),
+            title: const Text('Mijn moestuin'),
+            subtitle: Text(
+              widget.gardenStore.isEmpty
+                  ? 'Nog geen planten — voeg ze toe via Moestuin'
+                  : '${widget.gardenStore.count} plant(en) uit je moestuin',
+            ),
           ),
-          value: CalendarViewMode.myGarden,
-          groupValue: widget.prefs.mode,
-          onChanged: (v) {
-            if (v == null) return;
-            widget.prefs.setMode(v);
-            setState(() {});
-          },
-        ),
-        RadioListTile<CalendarViewMode>(
-          title: const Text('Alle groenten'),
-          subtitle: const Text('Volledige database in de kalender'),
-          value: CalendarViewMode.all,
-          groupValue: widget.prefs.mode,
-          onChanged: (v) {
-            if (v == null) return;
-            widget.prefs.setMode(v);
-            setState(() {});
-          },
-        ),
-        RadioListTile<CalendarViewMode>(
-          title: const Text('Zelf kiezen'),
-          subtitle: const Text('Vink alleen de gewassen aan die je wilt zien'),
-          value: CalendarViewMode.custom,
-          groupValue: widget.prefs.mode,
-          onChanged: (v) {
-            if (v == null) return;
-            widget.prefs.setMode(v);
-            if (_draftCustomIds.isEmpty && widget.gardenStore.isNotEmpty) {
-              _draftCustomIds = widget.gardenStore.ids.toSet();
-            }
-            setState(() {});
-          },
-        ),
+        ] else ...[
+          Text('Weergave', style: t.textTheme.titleSmall),
+          RadioListTile<CalendarViewMode>(
+            title: const Text('Mijn moestuin'),
+            subtitle: Text(
+              widget.gardenStore.isEmpty
+                  ? 'Nog geen planten in je moestuin'
+                  : '${widget.gardenStore.count} plant(en) uit je moestuin',
+            ),
+            value: CalendarViewMode.myGarden,
+            groupValue: widget.prefs.mode,
+            onChanged: (v) {
+              if (v == null) return;
+              widget.prefs.setMode(v);
+              setState(() {});
+            },
+          ),
+          RadioListTile<CalendarViewMode>(
+            title: const Text('Alle groenten'),
+            subtitle: const Text('Volledige database in de kalender'),
+            value: CalendarViewMode.all,
+            groupValue: widget.prefs.mode,
+            onChanged: (v) {
+              if (v == null) return;
+              widget.prefs.setMode(v);
+              setState(() {});
+            },
+          ),
+          RadioListTile<CalendarViewMode>(
+            title: const Text('Zelf kiezen'),
+            subtitle: const Text('Vink alleen de gewassen aan die je wilt zien'),
+            value: CalendarViewMode.custom,
+            groupValue: widget.prefs.mode,
+            onChanged: (v) {
+              if (v == null) return;
+              widget.prefs.setMode(v);
+              if (_draftCustomIds.isEmpty && widget.gardenStore.isNotEmpty) {
+                _draftCustomIds = widget.gardenStore.ids.toSet();
+              }
+              setState(() {});
+            },
+          ),
+        ],
         const SizedBox(height: 12),
         Text('Categorieën', style: t.textTheme.titleSmall),
         const SizedBox(height: 4),
@@ -130,7 +159,8 @@ class _CalendarFilterSheetState extends State<_CalendarFilterSheet> {
             onChanged: (on) => widget.prefs.setCategoryEnabled(cat, on),
           );
         }),
-        if (widget.prefs.mode == CalendarViewMode.custom) ...[
+        if (!widget.gardenOnly &&
+            widget.prefs.mode == CalendarViewMode.custom) ...[
           const SizedBox(height: 12),
           Row(
             children: [
@@ -140,8 +170,7 @@ class _CalendarFilterSheetState extends State<_CalendarFilterSheet> {
               TextButton(
                 onPressed: () {
                   setState(() {
-                    _draftCustomIds =
-                        vegetables.map((v) => v.id).toSet();
+                    _draftCustomIds = selectable.map((v) => v.id).toSet();
                   });
                 },
                 child: const Text('Alles'),
@@ -154,7 +183,7 @@ class _CalendarFilterSheetState extends State<_CalendarFilterSheet> {
               ),
             ],
           ),
-          ...vegetables.map((v) {
+          ...selectable.map((v) {
             final selected = _draftCustomIds.contains(v.id);
             final emoji = vegetableImageFor(v.id).emoji;
             return CheckboxListTile(
@@ -181,6 +210,21 @@ class _CalendarFilterSheetState extends State<_CalendarFilterSheet> {
             },
             child: const Text('Keuze opslaan'),
           ),
+        ],
+        if (widget.gardenOnly && gardenVegetables.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('Planten in je planner', style: t.textTheme.titleSmall),
+          const SizedBox(height: 4),
+          ...gardenVegetables.map((v) {
+            final emoji = vegetableImageFor(v.id).emoji;
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Text(emoji, style: const TextStyle(fontSize: 22)),
+              title: Text(v.nameNl),
+              subtitle: Text(calendarCategoryFor(v).label),
+            );
+          }),
         ],
       ],
     );

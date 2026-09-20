@@ -3,6 +3,7 @@ import '../models/garden_personal_event.dart';
 import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
 import 'crop_harvest_kind.dart';
+import 'crop_lifecycle_metadata.dart';
 import 'underground_crop.dart';
 import 'garden_profile_store.dart';
 import 'garden_scan_prefs_store.dart';
@@ -10,9 +11,183 @@ import 'my_garden_store.dart';
 import 'plant_scan_history.dart';
 import 'plant_scan_persist_policy.dart';
 import 'plant_scan_photo_store.dart';
+import 'home_action_completion.dart';
+import 'plant_lifecycle.dart';
 import 'planting_calendar.dart';
 
 DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Resterende dagen tot AI-oogst; telt elke kalenderdag af sinds de scan.
+int? remainingHarvestDays(
+  GardenPlantProfile profile, {
+  DateTime? reference,
+}) {
+  if (!hasPostPlantAiScan(profile)) return null;
+  final today = _dateOnly(reference ?? DateTime.now());
+  final predicted = profile.predictedHarvestAt;
+  if (predicted != null) {
+    final left = _dateOnly(predicted).difference(today).inDays;
+    return left > 0 ? left : null;
+  }
+  final analysis = profile.lastAnalysis;
+  if (analysis == null) return null;
+  final atScan = analysis.daysUntilHarvest;
+  if (atScan == null || atScan <= 0) return null;
+  final elapsed = today.difference(_dateOnly(analysis.scannedAt)).inDays;
+  final left = atScan - elapsed;
+  return left > 0 ? left : null;
+}
+
+/// AI-oogsttelling is verlopen (vandaag of eerder), zonder dat de fase «rijp» hoeft te zijn.
+bool isHarvestDueBySchedule(
+  GardenPlantProfile profile, {
+  DateTime? reference,
+}) {
+  if (!hasPostPlantAiScan(profile)) return false;
+  final today = _dateOnly(reference ?? DateTime.now());
+  final predicted = profile.predictedHarvestAt;
+  if (predicted != null) {
+    return !_dateOnly(predicted).isAfter(today);
+  }
+  final analysis = profile.lastAnalysis;
+  if (analysis == null) return false;
+  final atScan = analysis.daysUntilHarvest;
+  if (atScan == null) return false;
+  final elapsed = today.difference(_dateOnly(analysis.scannedAt)).inDays;
+  return atScan - elapsed <= 0;
+}
+
+/// Korte waarde voor moestuin-kaart «Oogst over …» (dagen of AI-venster).
+String? moestuinHarvestCountdownValue(
+  GardenPlantProfile profile, {
+  DateTime? reference,
+}) {
+  final days = remainingHarvestDays(profile, reference: reference);
+  if (days != null && days > 0) {
+    return days == 1 ? '1 dag' : '$days dagen';
+  }
+  return shortHarvestWindowLabel(profile.lastAnalysis?.harvestWindowLabel ?? '');
+}
+
+/// Verkort het AI-oogstvenster voor compacte UI; null = geen bruikbare AI-tekst.
+String? shortHarvestWindowLabel(String raw) {
+  var label = raw.trim();
+  if (label.isEmpty || label == '—' || label == '-') return null;
+
+  final lower = label.toLowerCase();
+
+  if (RegExp(r'enkele\s+jaren?').hasMatch(lower)) return 'Enkele jaren';
+  if (RegExp(r'meerdere\s+jaren?').hasMatch(lower)) return 'Meerdere jaren';
+
+  final yearRange = RegExp(
+    r'over\s+(\d+)\s*(?:tot|–|-)\s*(\d+)\s*jaar',
+  ).firstMatch(lower);
+  if (yearRange != null) {
+    return '${yearRange.group(1)}–${yearRange.group(2)} jaar';
+  }
+
+  final yearOver = RegExp(r'over\s+(\d+)\s*jaar').firstMatch(lower);
+  if (yearOver != null) {
+    final n = int.tryParse(yearOver.group(1)!);
+    if (n == 1) return '1 jaar';
+    if (n != null) return '$n jaar';
+  }
+
+  if (RegExp(r'\bjaren\b').hasMatch(lower)) return 'Jaren';
+  if (RegExp(r'\d+\s*jaar').hasMatch(lower) && lower.contains('oogst')) {
+    final m = RegExp(r'(\d+)\s*jaar').firstMatch(lower);
+    if (m != null) {
+      final n = int.tryParse(m.group(1)!);
+      if (n == 1) return '1 jaar';
+      if (n != null) return '$n jaar';
+    }
+    return 'Jaren';
+  }
+
+  final weekMatch = RegExp(r'over\s+(\d+)\s*weken?').firstMatch(lower);
+  if (weekMatch != null) {
+    final n = int.tryParse(weekMatch.group(1)!);
+    if (n == 1) return '1 week';
+    if (n != null) return '$n weken';
+  }
+
+  final monthMatch = RegExp(r'over\s+(\d+)\s*maanden?').firstMatch(lower);
+  if (monthMatch != null) {
+    final n = int.tryParse(monthMatch.group(1)!);
+    if (n == 1) return '1 maand';
+    if (n != null) return '$n maanden';
+  }
+
+  if (lower.contains('volgend seizoen') || lower.contains('volgende seizoen')) {
+    return 'Volgend seizoen';
+  }
+  if (lower.contains('niet dit seizoen') ||
+      lower.contains('niet voor dit') ||
+      lower.contains('niet dit jaar')) {
+    return 'Niet dit seizoen';
+  }
+  if (lower.contains('binnenkort')) return 'Binnenkort';
+
+  if (label.length <= 14) return _capitalizeHarvestLabel(label);
+
+  final first = label.split(RegExp(r'[.;,]')).first.trim();
+  if (first.length <= 14) return _capitalizeHarvestLabel(first);
+  return '${first.substring(0, 11)}…';
+}
+
+String _capitalizeHarvestLabel(String label) {
+  if (label.isEmpty) return label;
+  return label[0].toUpperCase() + label.substring(1);
+}
+
+/// Minstens één scan op of na de huidige zaai-/plantdatum.
+bool hasPostPlantAiScan(GardenPlantProfile profile) {
+  if (!profile.isPlanted) return false;
+  final analysis = profile.lastAnalysis;
+  if (analysis == null) return false;
+  // Bestaande plant met onbekende plantdatum: eerste scan geldt meteen.
+  if (profile.plantingDateUnknown) return true;
+  final planted = _dateOnly(profile.plantedAt);
+  final scanned = _dateOnly(analysis.scannedAt);
+  return !scanned.isBefore(planted);
+}
+
+/// Of de AI al een oogstschatting gaf die we direct mogen gebruiken.
+bool _aiHasHarvestEstimate(PlantAiAnalysis analysis) {
+  if (analysis.daysUntilHarvest != null) return true;
+  if (analysis.phase == PlantAiPhase.ripe ||
+      analysis.phase == PlantAiPhase.almostRipe) {
+    return true;
+  }
+  if (analysis.insight?.harvestReady == true) return true;
+  final label = analysis.harvestWindowLabel.trim();
+  return label.isNotEmpty && label != '—' && label != '-';
+}
+
+/// Oogstacties alleen na een geldige AI-scan van déze teelt (niet kalender/oud seizoen).
+bool canUseAiHarvestAssessment(
+  GardenPlantProfile profile, {
+  Vegetable? vegetable,
+}) {
+  if (!profile.isPlanted || !profile.isMoestuinActive) return false;
+  if (!hasPostPlantAiScan(profile)) return false;
+  final analysis = profile.lastAnalysis!;
+  if (!analysis.matchesSelectedCrop || analysis.hasCropMismatch) return false;
+
+  // Onbekende plantdatum of AI met oogstinfo: niet wachten op X dagen na toevoegen.
+  if (profile.plantingDateUnknown || _aiHasHarvestEstimate(analysis)) {
+    return true;
+  }
+  if (profile.predictedHarvestAt != null) return true;
+
+  final today = _dateOnly(DateTime.now());
+  final planted = _dateOnly(profile.plantedAt);
+  final daysSincePlant = today.difference(planted).inDays;
+  final minDays = vegetable != null && isPerennialCrop(vegetable) ? 120 : 21;
+  if (daysSincePlant < minDays) return false;
+
+  return true;
+}
 
 /// Motivatie voor eerste scan (bel, info-panelen, scan-banner).
 const String kFirstScanMotivationMessage =
@@ -21,15 +196,20 @@ const String kFirstScanMotivationMessage =
 /// Korte regel op plantkaart en status-chip.
 const String kFirstScanShortLabel = 'Maak je eerste scan';
 
+/// Actieknop op plantkaart, groene badge en scan-tegel.
+const String kFirstScanCardLabel = 'Eerste scan';
+
 /// Profiel na nieuwe AI-scan bijwerken.
 GardenPlantProfile applyAiScanToProfile(
   GardenPlantProfile profile,
   PlantAiAnalysis analysis, {
   required int weeklyScanIntervalDays,
+  required Vegetable vegetable,
   String? imageFingerprint,
   String? newScanPhotoPath,
+  bool forcePersist = false,
 }) {
-  if (!shouldPersistAiScan(analysis)) {
+  if (!forcePersist && !shouldPersistAiScan(analysis)) {
     return profile;
   }
 
@@ -85,15 +265,57 @@ GardenPlantProfile applyAiScanToProfile(
     harvestAt = _dateOnly(analysis.scannedAt);
   }
 
-  return updated.copyWith(
+  final coachingActive = profile.isMoestuinActive;
+
+  updated = updated.copyWith(
     lastAnalysis: analysis,
     predictedHarvestAt: harvestAt,
-    nextScanDue: _dateOnly(analysis.scannedAt)
-        .add(Duration(days: weeklyScanIntervalDays)),
+    nextScanDue: coachingActive
+        ? _dateOnly(analysis.scannedAt)
+            .add(Duration(days: weeklyScanIntervalDays))
+        : profile.nextScanDue,
     lastScanImageFingerprint: imageFingerprint,
-    plantHealthAcknowledged: analysis.warnings.isEmpty,
-    warningsDismissedFromBell: false,
+    plantHealthAcknowledged: coachingActive
+        ? analysis.warnings.isEmpty
+        : profile.plantHealthAcknowledged,
+    warningsDismissedFromBell:
+        coachingActive ? false : profile.warningsDismissedFromBell,
   );
+
+  if (!coachingActive) {
+    return updated;
+  }
+
+  updated = applyPlantLifecycleAfterScan(
+    profile: updated,
+    analysis: analysis,
+    vegetable: vegetable,
+    reference: analysis.scannedAt,
+  );
+
+  return completeScanHomeActionsOnProfile(updated, analysis);
+}
+
+/// Na een opgeslagen scan verdwijnen scan-acties op Home.
+GardenPlantProfile completeScanHomeActionsOnProfile(
+  GardenPlantProfile profile,
+  PlantAiAnalysis analysis,
+) {
+  final scanMs = analysis.scannedAt.millisecondsSinceEpoch;
+  final completed = Map<String, int>.from(profile.completedHomeActions);
+
+  void mark(String kindName, String topic, String activeLabel) {
+    completed[homeActionDismissKey(
+      kindName: kindName,
+      topic: topic,
+      activeLabel: activeLabel,
+    )] = scanMs;
+  }
+
+  mark('firstScan', 'Eerste scan', kFirstScanShortLabel);
+  mark('weeklyScan', 'Scan', 'Wekelijkse foto');
+
+  return profile.copyWith(completedHomeActions: completed);
 }
 
 DateTime firstPhotoDueDate(
@@ -116,9 +338,10 @@ String profilePlantedDateLabel(GardenPlantProfile profile) {
   return 'Geplant op $date';
 }
 
-/// Geplant maar nog geen enkele scan — actie mag direct op de kaart.
+/// Geplant maar nog geen geldige eerste scan na toevoegen/planten.
 bool awaitingFirstPhotoScan(GardenPlantProfile profile) {
-  return profile.isPlanted && profile.lastAnalysis == null;
+  if (!profile.isMoestuinActive) return false;
+  return profile.isPlanted && !hasPostPlantAiScan(profile);
 }
 
 /// Eerste scan op de actielijst (direct na “geplant”, ook zonder zichtbare kiem).
@@ -144,7 +367,7 @@ bool firstPhotoNotificationDue(
   return !today.isBefore(due);
 }
 
-/// Wanneer de eerste plant-scan — kort en duidelijk.
+/// Wanneer de eerste plant-scan · kort en duidelijk.
 String firstPhotoReminderLabel(
   GardenPlantProfile profile, {
   required int daysUntilFirstPhoto,
@@ -167,10 +390,29 @@ String firstPhotoReminderLabel(
 }
 
 bool needsWeeklyScan(GardenPlantProfile profile) {
+  if (!profile.isMoestuinActive) return false;
   if (!profile.isPlanted || profile.lastAnalysis == null) return false;
   final due = profile.nextScanDue;
   if (due == null) return true;
   return !_dateOnly(DateTime.now()).isBefore(_dateOnly(due));
+}
+
+/// Strenger dan [isReadyToHarvest]: alleen voor Home-acties (AI moet oogst bevestigen).
+bool isHomeHarvestActionDue(
+  GardenPlantProfile profile, {
+  Vegetable? vegetable,
+}) {
+  if (vegetable != null && isOrnamentalOnlyMoestuinCrop(vegetable)) {
+    return false;
+  }
+  if (!canUseAiHarvestAssessment(profile, vegetable: vegetable)) return false;
+  final a = profile.lastAnalysis!;
+  if (vegetable != null && isUndergroundCrop(vegetable)) {
+    return isUndergroundHarvestConfirmed(profile, vegetable);
+  }
+  if (a.insight?.harvestReady == true) return true;
+  if (a.phase == PlantAiPhase.ripe) return true;
+  return false;
 }
 
 bool isReadyToHarvest(
@@ -180,15 +422,14 @@ bool isReadyToHarvest(
   if (vegetable != null && isOrnamentalOnlyMoestuinCrop(vegetable)) {
     return false;
   }
-  final a = profile.lastAnalysis;
-  if (a == null) return false;
+  if (!canUseAiHarvestAssessment(profile, vegetable: vegetable)) return false;
+  final a = profile.lastAnalysis!;
   if (vegetable != null && isUndergroundCrop(vegetable)) {
     return isUndergroundHarvestConfirmed(profile, vegetable);
   }
   if (a.phase == PlantAiPhase.ripe) return true;
   if (a.insight?.harvestReady == true) return true;
-  final days = a.daysUntilHarvest;
-  return days != null && days <= 0;
+  return isHarvestDueBySchedule(profile);
 }
 
 /// Toon oogstblok op plantgeschiedenis (incl. «mogelijk» bij ondergrondse gewassen).
@@ -235,7 +476,7 @@ List<GardenPersonalEvent> personalEventsForProfile(
           vegetableId: profile.vegetableId,
           date: DateTime(now.year, month, day),
           type: PersonalEventType.plantReminder,
-          title: '$name — ${act.type.label}',
+          title: '$name · ${act.type.label}',
           subtitle: act.hint,
         ),
       );
@@ -253,7 +494,7 @@ List<GardenPersonalEvent> personalEventsForProfile(
         vegetableId: profile.vegetableId,
         date: due,
         type: PersonalEventType.firstPhoto,
-        title: '$name — eerste foto',
+        title: '$name · eerste foto',
         subtitle: 'Scan de plant voor persoonlijke planning',
       ),
     );
@@ -267,7 +508,7 @@ List<GardenPersonalEvent> personalEventsForProfile(
           vegetableId: profile.vegetableId,
           date: scanDue,
           type: PersonalEventType.weeklyScan,
-          title: '$name — voortgangsfoto',
+          title: '$name · voortgangsfoto',
           subtitle: 'Houd je moestuin bij met een nieuwe scan',
         ),
       );
@@ -281,7 +522,7 @@ List<GardenPersonalEvent> personalEventsForProfile(
           vegetableId: profile.vegetableId,
           date: harvest,
           type: PersonalEventType.harvest,
-          title: '$name — oogst',
+          title: '$name · oogst',
           subtitle: profile.lastAnalysis?.harvestWindowLabel,
         ),
       );

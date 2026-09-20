@@ -1,0 +1,27 @@
+{
+  "status": "filled",
+  "summary": "Eerdere gaps zijn ingevuld met NL-teeltkennis (slips, kas/exoten, meerjarigen, fruit plantgoed/snoei/onderstam, pootgoed/tenen). Geen openstaande ‘zoek dit zelf op’-vragen meer.",
+  "filledTopics": [
+    {
+      "topic": "Zoete aardappel",
+      "info": "Slips jan–mrt; uitplanten half mei–begin juni bij bodem ≥18 °C; oogst sep–okt; curen warm/droog."
+    },
+    {
+      "topic": "Meerjarigen",
+      "info": "Asperge kronen (jaar 1–2 niet oogsten); rabarber scheuren/neuzen; artisjok winterbescherming."
+    },
+    {
+      "topic": "Fruit",
+      "info": "Plantgoed nov–mrt (naakte wortel); enting boven grond; onderstam/grootte; pitfruit vs steenfruit snoei; bestuivers."
+    },
+    {
+      "topic": "Exoten NL",
+      "info": "Aubergine/meloen/okra: kas of warme plek; concrete temp/water/oogst."
+    },
+    {
+      "topic": "Pootgoed/tenen/kiem",
+      "info": "Aardappel pootgoed; knoflook/sjalot tenen; gember rizoom; taugé keukenkieming; wortel/radijs ter plaatse."
+    }
+  ],
+  "notes": "Educatieve teeltnoten (specialNotes) blijven zichtbaar in details — dat is correcte info, geen open gap."
+}

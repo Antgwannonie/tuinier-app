@@ -1,0 +1,161 @@
+{
+  "curatedLeaks": [
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 1290,
+      "entryId": "sla",
+      "expectedName": "Sla",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 1950,
+      "entryId": "krulsla",
+      "expectedName": "Krulsla",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 2170,
+      "entryId": "lambsla",
+      "expectedName": "Lambsla",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 3270,
+      "entryId": "andijvie",
+      "expectedName": "Andijvie",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 3710,
+      "entryId": "snijbiet",
+      "expectedName": "Snijbiet",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 4150,
+      "entryId": "witlof",
+      "expectedName": "Witlof",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 4370,
+      "entryId": "veldsla",
+      "expectedName": "Veldsla",
+      "wrongPlantId": "ui",
+      "wrongPlantName": "Ui",
+      "snippet": "Jonge uitgedunde plantjes kun je elders opnieuw zetten."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 33032,
+      "entryId": "rabarber",
+      "expectedName": "Rabarber",
+      "wrongPlantId": "asperge",
+      "wrongPlantName": "Asperge",
+      "snippet": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_sowing_guide_entries.dart",
+      "line": 34145,
+      "entryId": "artisjok",
+      "expectedName": "Artisjok",
+      "wrongPlantId": "asperge",
+      "wrongPlantName": "Asperge",
+      "snippet": "Voor asperge/artisjok e.d. is plantgoed vaak beter dan zaad."
+    },
+    {
+      "severity": "high",
+      "file": "lib/data/plant_transplant_guide_entries.dart",
+      "line": 107453,
+      "entryId": "estragon",
+      "expectedName": "Estragon",
+      "wrongPlantId": "dragon",
+      "wrongPlantName": "Dragon",
+      "snippet": "Warmte versnelt de meeste vruchtgewassen; droogte of kou vertraagt. Te dicht planten kan oogst verkleinen. Habitus: Synoniem voor dragon."
+    }
+  ],
+  "builderIssues": [
+    {
+      "severity": "high",
+      "file": "lib/data/plant_weetjes_guide.dart",
+      "line": 148,
+      "note": "Matches komkommerkruid — cucumber weetjes leak",
+      "snippet": "final isCucumber = id.contains('komkommer');"
+    },
+    {
+      "severity": "medium",
+      "file": "lib/data/crop_card_summaries.dart",
+      "line": 141,
+      "note": "Tomato depth tip shown for all plants in cropCardSummaryFor transplant",
+      "snippet": "return 'Plant $name op dezelfde diepte als in de pot (tomaat iets dieper mag).';"
+    },
+    {
+      "severity": "medium",
+      "file": "lib/data/plant_growth_guide.dart",
+      "line": 323,
+      "note": "Care/id blob treats any id/care mentioning tomaat as climbing/support",
+      "snippet": "blob.contains('tomaat') ||"
+    },
+    {
+      "severity": "medium",
+      "file": "lib/data/plant_growth_guide.dart",
+      "line": 333,
+      "note": "Care/id blob treats any id/care mentioning tomaat as climbing/support",
+      "snippet": "blob.contains('tomaat') ||"
+    },
+    {
+      "severity": "low",
+      "file": "lib/data/plant_harvest_guide.dart",
+      "line": 597,
+      "note": "Tomato illustration used for all fruit harvest ripeness section",
+      "snippet": "illustration: PlantHarvestIllustration.ripeTomato,"
+    },
+    {
+      "severity": "low",
+      "file": "lib/data/plant_harvest_guide.dart",
+      "line": 708,
+      "note": "Tomato illustration used for all plants perfect harvest section",
+      "snippet": "illustration: PlantHarvestIllustration.perfectTomato,"
+    },
+    {
+      "severity": "medium",
+      "file": "lib/data/plant_care_guide.dart",
+      "line": 163,
+      "note": "Care/id blob treats any id/care mentioning tomaat as climbing/support",
+      "snippet": "blob.contains('tomaat') ||"
+    }
+  ],
+  "substringMisfires": [],
+  "summary": {
+    "curatedLeakCount": 10,
+    "builderIssueCount": 7,
+    "substringMisfireCount": 0
+  }
+}

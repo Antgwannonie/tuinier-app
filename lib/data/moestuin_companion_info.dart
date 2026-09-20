@@ -138,8 +138,9 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     goodNearLabels: ['Tomaat', 'Paprika', 'Ui', 'Kool'],
     whenToPlant: 'Maart–mei voorzaaien · bloei juni–oktober',
     atAGlance:
-        'Helpt tegen wortelknobbelaaltjes en witte vlieg; plant tussen rijen of per hoek.',
-    tip: 'Lage en hoge tagetes: beide nuttig, lage variant minder hoog in smalle paden.',
+        'Kan wortelknobbelaaltjes remmen (sterkst bij dichte voorteelt op dezelfde plek); '
+        'plant na IJsheiligen tussen rijen of als bed-voorteelt.',
+    tip: 'Lage en hoge tagetes: beide nuttig; verwacht geen wonder van 2–3 losse plantjes.',
   ),
   'tagetes_patula': MoestuinCompanionInfo(
     plantKindLabel: 'Bloem (laag)',
@@ -149,7 +150,8 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     goodNearLabels: ['Tomaat', 'Paprika', 'Ui', 'Aardappel'],
     whenToPlant: 'Mei–juni uitplanten · bloei zomer',
     atAGlance:
-        'Sterke begeleider bij nachtschadegewassen; werkt op bodemplagen bij wortelgewassen.',
+        'Lage Tagetes patula; aaltjeswerking het sterkst bij dichtere inzet of voorteelt, '
+        'plus nuttige insecten tussen nachtschade.',
   ),
   'goudsbloem': MoestuinCompanionInfo(
     plantKindLabel: 'Eetbare bloem',
@@ -179,7 +181,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     whenToPlant: 'Mei–juni direct zaaien · bloei juli–oktober',
     atAGlance:
         'Trek bladluis weg van kool en komkommer; plant iets verder van hoofdteelt.',
-    tip: 'Niet te dicht op jonge koolplanten — eerst als lokmiddel verderop.',
+    tip: 'Niet te dicht op jonge koolplanten, eerst als lokmiddel verderop.',
   ),
   'komkommerkruid': MoestuinCompanionInfo(
     plantKindLabel: 'Bloem & blad',
@@ -203,16 +205,6 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     atAGlance:
         'Top voor bijen; verbetert bodemstructuur als je na bloei uitspit.',
     tip: 'Ideaal om lege plek na radijs of sla op te vullen.',
-  ),
-  'phacelia_tanacetifolia': MoestuinCompanionInfo(
-    plantKindLabel: 'Groenbemester & bijenplant',
-    benefits: [
-      CompanionBenefitKind.pollination,
-      CompanionBenefitKind.soilHealth,
-    ],
-    goodNearLabels: ['Alle bedden (tussen)', 'Fruitbomen', 'Bonen'],
-    whenToPlant: 'April–augustus · snelle bloei',
-    atAGlance: 'Een van de beste bijenplanten in de moestuin; kort inmengen na oogst.',
   ),
   'korenbloem': MoestuinCompanionInfo(
     plantKindLabel: 'Bloem',
@@ -280,7 +272,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     goodNearLabels: ['Sla', 'Aardbei', 'Kool', 'Tomaat'],
     whenToPlant: 'Mei–juni · bloei de hele zomer',
     atAGlance:
-        'Zoete geur trekt zweefvliegen die bladluis eten — ideaal tussen lage gewassen.',
+        'Zoete geur trekt zweefvliegen die bladluis eten, ideaal tussen lage gewassen.',
   ),
   'alyssum_sneeuw': MoestuinCompanionInfo(
     plantKindLabel: 'Laag bloeitapijt',
@@ -294,7 +286,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     benefits: [CompanionBenefitKind.pollination],
     goodNearLabels: ['Aardbei', 'Fruit', 'Bonen', 'Komkommer'],
     whenToPlant: 'April–mei · bloei mei–juli',
-    atAGlance: '“Slakkenplantje” — enorme bijenaantrek; kort en fel geel.',
+    atAGlance: '“Slakkenplantje”, enorme bijenaantrek; kort en fel geel.',
   ),
   'monarda': MoestuinCompanionInfo(
     plantKindLabel: 'Vaste bloem',
@@ -348,7 +340,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     ],
     goodNearLabels: ['Vóór koolteelt', 'Leeg bed'],
     whenToPlant: 'April–september · niet vlak vóór kool zaaien',
-    atAGlance: 'Vangt koolvlieg; verbetert bodem — wel 4 weken voor kool oogsten/uitspitten.',
+    atAGlance: 'Vangt koolvlieg; verbetert bodem, wel 4 weken voor kool oogsten/uitspitten.',
     tip: 'Niet direct vóór broccoli of spruitkool zaaien (zelfde familie).',
   ),
   'klaproos': MoestuinCompanionInfo(
@@ -371,7 +363,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     goodNearLabels: ['Hele tuin (hommels)', 'Fruit in de buurt'],
     whenToPlant: 'Jonge boom planten · bloei juni',
     atAGlance: 'Hommel- en bijenboom op lange termijn; alleen bij ruime tuin.',
-    tip: 'Geen ideale keuze in klein bed — kies facelia of klaver in de moestuin zelf.',
+    tip: 'Geen ideale keuze in klein bed, kies facelia of klaver in de moestuin zelf.',
   ),
   'ui_bloei': MoestuinCompanionInfo(
     plantKindLabel: 'Ui in bloei',
@@ -395,7 +387,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     ],
     goodNearLabels: ['Kool', 'Komkommer', 'Tomaat'],
     whenToPlant: 'Zaai door; laat deel bloeien',
-    atAGlance: 'Zweefvliegen en parasietwespen — ideaal tussen kool.',
+    atAGlance: 'Zweefvliegen en parasietwespen, ideaal tussen kool.',
   ),
   'koriander_bloei': MoestuinCompanionInfo(
     plantKindLabel: 'Kruid in bloei',
@@ -407,7 +399,7 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     whenToPlant: 'Doorzaaien elke 3 weken',
     atAGlance: 'Bloei trekt nuttige insecten; zaai regelmatig door voor lang effect.',
   ),
-  'lavendel_bloei': MoestuinCompanionInfo(
+  'lavendel': MoestuinCompanionInfo(
     plantKindLabel: 'Vaste kruid',
     benefits: [
       CompanionBenefitKind.pestControl,
@@ -416,6 +408,52 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     goodNearLabels: ['Pad', 'Aardbei', 'Rozen', 'Fruit'],
     whenToPlant: 'Voorjaar planten · zon',
     atAGlance: 'Geur op wolluis en mot; bijen in de zomer.',
+  ),
+  'zinnia': MoestuinCompanionInfo(
+    plantKindLabel: 'Bloem (snij)',
+    benefits: [
+      CompanionBenefitKind.pollination,
+      CompanionBenefitKind.biodiversity,
+    ],
+    goodNearLabels: ['Tomaat', 'Komkommer', 'Rand van het bed'],
+    whenToPlant: 'Mei zaaien/uitplanten · bloei juli–oktober',
+    atAGlance:
+        'Kleurrijke snijbloem die bijen en vlinders lokt tussen groenten.',
+    tip: 'Deadhead voor langere bloei; laat eind zomer wat staan voor zaad.',
+  ),
+  'lupine_groenbemester': MoestuinCompanionInfo(
+    plantKindLabel: 'Groenbemester',
+    benefits: [
+      CompanionBenefitKind.soilHealth,
+      CompanionBenefitKind.pollination,
+    ],
+    goodNearLabels: ['Na vroege oogst', 'Braak liggend bed', 'Fruit'],
+    whenToPlant: 'Voorjaar of nazomer inzaaien',
+    atAGlance:
+        'Stikstofbinder die de bodem verrijkt en bijen lokt tijdens de bloei.',
+    tip: 'Werk onder vóór zaadvorming als je vooral bemesting wilt.',
+  ),
+  'stiefmoedje': MoestuinCompanionInfo(
+    plantKindLabel: 'Bloem (rand)',
+    benefits: [
+      CompanionBenefitKind.biodiversity,
+      CompanionBenefitKind.pollination,
+    ],
+    goodNearLabels: ['Pad', 'Potten', 'Rand moestuin'],
+    whenToPlant: 'Voorjaar of najaar planten · koele bloei',
+    atAGlance:
+        'Vrolijke randplant die vroeg en laat in het seizoen kleur en insecten brengt.',
+  ),
+  'ringelbloem': MoestuinCompanionInfo(
+    plantKindLabel: 'Eetbare bloem',
+    benefits: [
+      CompanionBenefitKind.pestControl,
+      CompanionBenefitKind.biodiversity,
+    ],
+    goodNearLabels: ['Boon', 'Sla', 'Tomaat', 'Komkommer'],
+    whenToPlant: 'Maart–juni doorzaaien · bloei juni–oktober',
+    atAGlance:
+        'Synoniem/variant van goudsbloem: lokt nuttige insecten; bloembladeren eetbaar.',
   ),
   'salie_bloei': MoestuinCompanionInfo(
     plantKindLabel: 'Kruid in bloei',
@@ -453,6 +491,6 @@ const Map<String, MoestuinCompanionInfo> _kCompanionInfo = {
     goodNearLabels: ['Aardbei', 'Kool (op afstand)', 'In pot'],
     whenToPlant: 'Altijd in pot · anders verspreidt hij',
     atAGlance: 'Geur op mieren en kevers; bloei voor bijen.',
-    tip: 'Altijd in pot plaatsen — wortels kunnen andere planten overwoekeren.',
+    tip: 'Altijd in pot plaatsen, wortels kunnen andere planten overwoekeren.',
   ),
 };

@@ -32,15 +32,17 @@ const Map<String, String> kMoestuinCompanionEmojis = {
   'look_bloei': '🌸',
   'dille_bloei': '🌼',
   'koriander_bloei': '🌼',
-  'lavendel_bloei': '💜',
   'salie_bloei': '🌿',
   'tijm_bloei': '🌿',
   'basilicum_bloei': '🌿',
   'munt_bloei': '🍃',
   'calendula_officinalis': '🌼',
   'tagetes_patula': '🌼',
-  'phacelia_tanacetifolia': '💜',
   'alyssum_sneeuw': '🤍',
+  'zinnia': '🌸',
+  'lupine_groenbemester': '🌺',
+  'stiefmoedje': '💜',
+  'ringelbloem': '🌼',
 };
 
 const String _companionData = '''
@@ -70,15 +72,17 @@ ui_bloei|Bloeiende ui|Uiengewassen|Moestuin-bloemen (nuttig)|Juni–juli|Uiengeu
 look_bloei|Bloeiende knoflook|Uiengewassen|Moestuin-bloemen (nuttig)|Juni–juli|Lookfamilie werkt afschrikkend op enkele plagen bij tomaten en rozen.
 dille_bloei|Bloeiende dille|Schermbloemenfamilie|Moestuin-bloemen (nuttig)|Juni–augustus|Trekt zweefvliegen en parasietwespen; ideaal bij kool en komkommer.
 koriander_bloei|Bloeiende koriander|Schermbloemenfamilie|Moestuin-bloemen (nuttig)|Juni–augustus|Bloei trekt nuttige insecten; zaai door voor langere bloei.
-lavendel_bloei|Lavendel|Lipbloemenfamilie|Moestuin-bloemen (nuttig)|Juli–augustus|Geur werkt op o.a. wolluis en motten; trekt bijen.
 salie_bloei|Bloeiende salie|Lipbloemenfamilie|Moestuin-bloemen (nuttig)|Juni–augustus|Afschrikkend op koolmot; nuttig bij kool, wortel en aardbei.
 tijm_bloei|Bloeiende tijm|Lipbloemenfamilie|Moestuin-bloemen (nuttig)|Juni–augustus|Laag struikje; helpt tegen koolbladluis en trekt bestuivers.
 basilicum_bloei|Bloeiende basilicum|Lipbloemenfamilie|Moestuin-bloemen (nuttig)|Juli–september|Versterkt tomaten en paprika; knip bloei bij keukengebruik.
 munt_bloei|Bloeiende munt|Lipbloemenfamilie|Moestuin-bloemen (nuttig)|Juli–augustus|In pot houden; geur op mieren en kevers; trekt bijen.
 calendula_officinalis|Goudsbloem officinalis|Composietenfamilie|Moestuin-bloemen (nuttig)|Juni–oktober|Eetbare bloem; trekt lieveheersbeestjes tegen bladluis.
 tagetes_patula|Afrikaantje (lage tagetes)|Composietenfamilie|Moestuin-bloemen (nuttig)|Juni–oktober|Sterk bij tomaten, paprika en ui; werkt op wortelknobbelaaltjes.
-phacelia_tanacetifolia|Facelia (phacelia)|Boraginaceae|Moestuin-bloemen (nuttig)|Juni–augustus|Top bijenplant; inmengen na vroege oogst.
 alyssum_sneeuw|Sneeuwzaadslurf|Koolgewas|Moestuin-bloemen (nuttig)|Mei–oktober|Laag tapijt; zweefvliegen eten bladluis bij sla en aardbei.
+zinnia|Zinnia|Composietenfamilie|Moestuin-bloemen (nuttig)|Juli–oktober|Langbloeiend; trekt bijen, vlinders en hommels langs de moestuin.
+lupine_groenbemester|Lupine (groenbemester)|Vlinderbloemenfamilie|Moestuin-bloemen (nuttig)|Mei–juli|Groenbemester en bijenplant; na bloei omslaan of uitspitten.
+stiefmoedje|Stiefmoedje (viooltje)|Viooltjesfamilie|Moestuin-bloemen (nuttig)|Maart–mei|Vroege bijenplant; geschikt als rand of in pot bij de moestuin.
+ringelbloem|Ringelbloem|Composietenfamilie|Moestuin-bloemen (nuttig)|Juni–oktober|Trekt lieveheersbeestjes; in de moestuin ook bekend als goudsbloem (calendula).
 ''';
 
 List<Vegetable> _parseCompanionPlants(String raw) {

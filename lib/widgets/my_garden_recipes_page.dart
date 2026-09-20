@@ -112,8 +112,8 @@ class _RecipesBody extends StatelessWidget {
         title: 'Nog geen recepten',
         body:
             'Met je huidige planten (${_shortPlantList(gardenNames)}) '
-            'past nog niets in het boek. Voeg combinaties toe — '
-            'sla met tomaat of wortel met bosui — voor nieuwe ideeën.',
+            'past nog niets in het boek. Voeg combinaties toe, '
+            'sla met tomaat of wortel met bosui, voor nieuwe ideeën.',
         footer: _GardenPlantsStrip(names: gardenNames),
       );
     }
@@ -368,7 +368,7 @@ class _RecipeNotificationsBanner extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         count == 1
-                            ? '${first.recipe.title} — ${first.shortLabel}'
+                            ? '${first.recipe.title}, ${first.shortLabel}'
                             : 'Open een recept om de melding weg te halen.',
                         style: t.textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,

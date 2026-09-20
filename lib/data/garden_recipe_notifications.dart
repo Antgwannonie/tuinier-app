@@ -9,7 +9,7 @@ enum RecipeNotificationKind {
   harvestReady,
 }
 
-/// In-app melding op Mijn recepten (badge + highlight).
+/// In-app melding op Recepten in Notities (badge + highlight).
 class RecipeNotification {
   const RecipeNotification({
     required this.recipe,
@@ -32,7 +32,7 @@ class RecipeNotification {
     switch (kind) {
       case RecipeNotificationKind.full:
         if (harvestableVegetableIds.isNotEmpty) {
-          return 'Klaar om te maken — oogst uit je tuin';
+          return 'Klaar om te maken, oogst uit je tuin';
         }
         return 'Volledig recept uit je moestuin';
       case RecipeNotificationKind.harvestReady:

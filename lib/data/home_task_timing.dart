@@ -2,6 +2,7 @@ import '../models/garden_plant_profile.dart';
 import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
 import 'garden_countdown.dart';
+import 'garden_plant_schedule.dart';
 import 'planting_calendar.dart';
 
 /// Of een taak nu kan (volle kleur) of nog vergrendeld is.
@@ -87,6 +88,7 @@ HomeTaskTiming resolveHomeTaskTiming({
   required GardenPlantProfile? profile,
   required bool useAi,
   DateTime? reference,
+  bool allowCalendarHarvest = true,
 }) {
   final today = _dateOnly(reference ?? DateTime.now());
 
@@ -94,28 +96,47 @@ HomeTaskTiming resolveHomeTaskTiming({
       profile != null &&
       taskType == GardenTaskType.harvest &&
       profile.lastAnalysis != null) {
-    final analysis = profile.lastAnalysis!;
-    final days = analysis.daysUntilHarvest;
-    if (days != null) {
-      final active = days <= 0 || analysis.phase == PlantAiPhase.ripe;
-      return HomeTaskTiming(
-        isActiveNow: active,
-        daysUntil: active ? null : days,
-        usesAi: true,
-        countdownLabel: active ? null : 'Over $days dagen (AI)',
-      );
+    if (canUseAiHarvestAssessment(profile, vegetable: vegetable)) {
+      final analysis = profile.lastAnalysis!;
+      final days = analysis.daysUntilHarvest;
+      if (days != null) {
+        final active = days <= 0 || analysis.phase == PlantAiPhase.ripe;
+        return HomeTaskTiming(
+          isActiveNow: active,
+          daysUntil: active ? null : days,
+          usesAi: true,
+          countdownLabel: active ? null : 'Over $days dagen (AI)',
+        );
+      }
+      final aiWindow = shortHarvestWindowLabel(analysis.harvestWindowLabel);
+      if (aiWindow != null) {
+        return HomeTaskTiming(
+          isActiveNow: false,
+          daysUntil: null,
+          usesAi: true,
+          countdownLabel: aiWindow,
+        );
+      }
+      final harvest = profile.predictedHarvestAt;
+      if (harvest != null) {
+        final d = _dateOnly(harvest).difference(today).inDays;
+        final active = d <= 0;
+        return HomeTaskTiming(
+          isActiveNow: active,
+          daysUntil: active ? null : d,
+          usesAi: true,
+          countdownLabel: active ? null : 'Over $d dagen (AI)',
+        );
+      }
     }
-    final harvest = profile.predictedHarvestAt;
-    if (harvest != null) {
-      final d = _dateOnly(harvest).difference(today).inDays;
-      final active = d <= 0;
-      return HomeTaskTiming(
-        isActiveNow: active,
-        daysUntil: active ? null : d,
-        usesAi: true,
-        countdownLabel: active ? null : 'Over $d dagen (AI)',
-      );
-    }
+  }
+
+  if (profile != null &&
+      taskType == GardenTaskType.harvest &&
+      profile.isPlanted &&
+      useAi &&
+      !allowCalendarHarvest) {
+    return const HomeTaskTiming(isActiveNow: false);
   }
 
   final status = gardenStatusForTask(vegetable.id, taskType, reference);
@@ -254,4 +275,101 @@ Map<String, HomeTaskEntry> homeTaskEntriesByVegetableForMonth({
     }
   }
   return byId;
+}
+
+const _plantingTaskTypes = [
+  GardenTaskType.plantOutdoors,
+  GardenTaskType.sowOutdoors,
+  GardenTaskType.preSow,
+];
+
+const _harvestTaskTypes = [GardenTaskType.harvest];
+
+/// Zaai-/plantacties in de moestuin voor de gekozen maand.
+List<HomeTaskEntry> homePlantingEntriesForMonth({
+  required int month,
+  required Iterable<String> vegetableIds,
+  required GardenPlantProfile? Function(String id) profileFor,
+  required Vegetable? Function(String id) vegetableById,
+  DateTime? reference,
+}) {
+  return _mergeTaskEntriesForTypes(
+    month: month,
+    types: _plantingTaskTypes,
+    vegetableIds: vegetableIds,
+    useAiFor: (_) => false,
+    profileFor: profileFor,
+    vegetableById: vegetableById,
+    reference: reference,
+  );
+}
+
+/// Kalender-oogstacties in de moestuin voor de gekozen maand.
+List<HomeTaskEntry> homeHarvestCalendarEntriesForMonth({
+  required int month,
+  required Iterable<String> vegetableIds,
+  required bool Function(String vegetableId) useAiFor,
+  required GardenPlantProfile? Function(String id) profileFor,
+  required Vegetable? Function(String id) vegetableById,
+  DateTime? reference,
+}) {
+  return _mergeTaskEntriesForTypes(
+    month: month,
+    types: _harvestTaskTypes,
+    vegetableIds: vegetableIds,
+    useAiFor: useAiFor,
+    profileFor: profileFor,
+    vegetableById: vegetableById,
+    reference: reference,
+  );
+}
+
+List<HomeTaskEntry> _mergeTaskEntriesForTypes({
+  required int month,
+  required List<GardenTaskType> types,
+  required Iterable<String> vegetableIds,
+  required bool Function(String vegetableId) useAiFor,
+  required GardenPlantProfile? Function(String id) profileFor,
+  required Vegetable? Function(String id) vegetableById,
+  DateTime? reference,
+}) {
+  final byId = <String, HomeTaskEntry>{};
+  for (final type in types) {
+    final entries = homeTaskEntriesFor(
+      month: month,
+      taskFilter: type,
+      vegetableIds: vegetableIds,
+      useAiFor: useAiFor,
+      profileFor: profileFor,
+      vegetableById: vegetableById,
+      reference: reference,
+    );
+    for (final entry in entries) {
+      final existing = byId[entry.vegetableId];
+      if (existing == null || _isPreferredHomeTaskEntry(entry, existing)) {
+        byId[entry.vegetableId] = entry;
+      }
+    }
+  }
+
+  final list = byId.values.toList();
+  list.sort((a, b) {
+    if (a.timing.isActiveNow != b.timing.isActiveNow) {
+      return a.timing.isActiveNow ? -1 : 1;
+    }
+    final da = a.timing.daysUntil ?? 9999;
+    final db = b.timing.daysUntil ?? 9999;
+    final cmp = da.compareTo(db);
+    if (cmp != 0) return cmp;
+    return a.vegetableId.compareTo(b.vegetableId);
+  });
+  return list;
+}
+
+/// Korte regel onder plantnaam op home (zaai/plant/oogst).
+String homeTaskEntryLabel(HomeTaskEntry entry) {
+  if (entry.timing.isActiveNow) {
+    return entry.activity.type.label;
+  }
+  return entry.timing.countdownLabel ?? entry.activity.type.label;
 }

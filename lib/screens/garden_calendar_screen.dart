@@ -24,6 +24,7 @@ class GardenCalendarScreen extends StatefulWidget {
     required this.profileStore,
     required this.scanPrefs,
     required this.calendarPrefs,
+    this.gardenOnly = false,
     this.initialMonth,
     this.initialYear,
     this.embedded = false,
@@ -39,6 +40,9 @@ class GardenCalendarScreen extends StatefulWidget {
   final GardenNotesStore? notesStore;
   final int? initialMonth;
   final int? initialYear;
+
+  /// Planner-tab: alleen planten uit de moestuin (nooit de hele database).
+  final bool gardenOnly;
 
   /// In ondernavigatie: geen terug-knop / pop met resultaat.
   final bool embedded;
@@ -95,6 +99,7 @@ class _GardenCalendarScreenState extends State<GardenCalendarScreen> {
       prefs: widget.calendarPrefs,
       repository: widget.repository,
       gardenStore: widget.gardenStore,
+      gardenOnly: widget.gardenOnly,
     );
   }
 
@@ -103,16 +108,23 @@ class _GardenCalendarScreenState extends State<GardenCalendarScreen> {
     final monthName = kMonthNamesNl[_month];
 
     return ListenableBuilder(
-      listenable: widget.calendarPrefs,
+      listenable: Listenable.merge([
+        widget.calendarPrefs,
+        widget.gardenStore,
+      ]),
       builder: (context, _) {
         final visibleIds = widget.calendarPrefs.visibleVegetableIds(
           repository: widget.repository,
           gardenStore: widget.gardenStore,
+          gardenOnly: widget.gardenOnly,
         );
         final calendarNote = widget.calendarPrefs.subtitle(
           gardenStore: widget.gardenStore,
           visibleCount: visibleIds.length,
-          totalCount: widget.repository.all.length,
+          totalCount: widget.gardenOnly
+              ? widget.gardenStore.count
+              : widget.repository.all.length,
+          gardenOnly: widget.gardenOnly,
         );
 
         return _buildScaffold(
@@ -199,69 +211,114 @@ class _GardenCalendarScreenState extends State<GardenCalendarScreen> {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Row(
-              children: kWeekdayLabelsNl
-                  .map(
-                    (d) => Expanded(
-                      child: Center(
-                        child: Text(
-                          d,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+          if (widget.gardenOnly && widget.gardenStore.isEmpty)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.yard_outlined,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.primary
+                            .withValues(alpha: 0.55),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Nog geen planten in je moestuin',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'De planner werkt met de gewassen uit jouw moestuin. '
+                        'Voeg eerst planten toe via het Moestuin-tabblad.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(
+                children: kWeekdayLabelsNl
+                    .map(
+                      (d) => Expanded(
+                        child: Center(
+                          child: Text(
+                            d,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ),
                       ),
+                    )
+                    .toList(),
+              ),
+            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _applyPageIndex,
+                itemCount: GardenCalendarScreen._monthSpan,
+                itemBuilder: (context, pageIndex) {
+                  final month = (pageIndex % 12) + 1;
+                  final year = GardenCalendarScreen._baseYear + pageIndex ~/ 12;
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: MonthCalendarGrid(
+                      month: month,
+                      year: year,
+                      gardenVegetableIds: visibleIds,
+                      profileStore: widget.profileStore,
+                      gardenStore: widget.gardenStore,
+                      repository: widget.repository,
+                      scanPrefs: widget.scanPrefs,
+                      notesStore: widget.notesStore,
+                      onDayTap: (day, activities, personal, dayNotes) =>
+                          _showDaySheet(
+                        context,
+                        month,
+                        year,
+                        day,
+                        activities,
+                        personal,
+                        dayNotes,
+                      ),
                     ),
-                  )
-                  .toList(),
+                  );
+                },
+              ),
             ),
-          ),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: _applyPageIndex,
-              itemCount: GardenCalendarScreen._monthSpan,
-              itemBuilder: (context, pageIndex) {
-                final month = (pageIndex % 12) + 1;
-                final year = GardenCalendarScreen._baseYear + pageIndex ~/ 12;
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                  child: MonthCalendarGrid(
-                    month: month,
-                    year: year,
-                    gardenVegetableIds: visibleIds,
-                    profileStore: widget.profileStore,
-                    gardenStore: widget.gardenStore,
-                    repository: widget.repository,
-                    scanPrefs: widget.scanPrefs,
-                    notesStore: widget.notesStore,
-                    onDayTap: (day, activities, personal, dayNotes) =>
-                        _showDaySheet(
-                      context,
-                      month,
-                      year,
-                      day,
-                      activities,
-                      personal,
-                      dayNotes,
+          ],
+          if (!(widget.gardenOnly && widget.gardenStore.isEmpty))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Text(
+                'Swipe links/rechts · tik op een dag met notities of emoji’s',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                  ),
-                );
-              },
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-            child: Text(
-              'Swipe links/rechts · tik op een dag met notities of emoji’s',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
         ],
       ),
     );
@@ -376,10 +433,8 @@ class _GardenCalendarScreenState extends State<GardenCalendarScreen> {
                         builder: (_) => VegetableDetailScreen(
                           vegetable: veg,
                           focusMonth: month,
-                          gardenStore: widget.gardenStore,
                           repository: widget.repository,
-                          profileStore: widget.profileStore,
-                          scanPrefs: widget.scanPrefs,
+                          presentation: VegetableDetailPresentation.encyclopedia,
                         ),
                       ),
                     );

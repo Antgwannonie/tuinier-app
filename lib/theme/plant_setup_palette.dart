@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Kleuren alleen voor de plant-toevoegen / geplant-sheets (experimenteerbaar).
+import 'tuinier_colors.dart';
+
+/// Kleuren voor plant-sheets en moestuin-kaarten (mockup-groen).
 class PlantSetupPalette {
   const PlantSetupPalette({
     required this.badgeBackground,
@@ -35,40 +37,21 @@ class PlantSetupPalette {
   final Color confirmButtonForeground;
 
   factory PlantSetupPalette.of(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    if (dark) {
-      return const PlantSetupPalette(
-        badgeBackground: Color(0xFF8B6914),
-        badgeForeground: Color(0xFFFFF8E7),
-        cardBackground: Color(0xFF2A3328),
-        cardBorder: Color(0xFF4A5C47),
-        sectionLabel: Color(0xFFB8C9AE),
-        dateIconBackground: Color(0xFF3D5A40),
-        dateIconForeground: Color(0xFFE8F5E6),
-        chipSelectedBackground: Color(0xFF5A7A52),
-        chipSelectedForeground: Color(0xFFF5FAF3),
-        chipIdleBackground: Color(0xFF353F34),
-        chipIdleForeground: Color(0xFF9EAE98),
-        activeIcon: Color(0xFF9CCC65),
-        confirmButton: Color(0xFF6B8E4E),
-        confirmButtonForeground: Color(0xFF1B2418),
-      );
-    }
     return const PlantSetupPalette(
-      badgeBackground: Color(0xFFC67B4E),
-      badgeForeground: Color(0xFFFFF8F0),
-      cardBackground: Color(0xFFF0F5EC),
-      cardBorder: Color(0xFFB8C9AE),
-      sectionLabel: Color(0xFF3D5A40),
-      dateIconBackground: Color(0xFFC5E1C5),
-      dateIconForeground: Color(0xFF1B4332),
-      chipSelectedBackground: Color(0xFF3D6B4F),
-      chipSelectedForeground: Color(0xFFF5FAF3),
-      chipIdleBackground: Color(0xFFE2E8DE),
-      chipIdleForeground: Color(0xFF5C6B58),
-      activeIcon: Color(0xFF2F5233),
-      confirmButton: Color(0xFF3D6B4F),
-      confirmButtonForeground: Color(0xFFF5FAF3),
+      badgeBackground: TuinierColors.lightGreen,
+      badgeForeground: TuinierColors.card,
+      cardBackground: TuinierColors.card,
+      cardBorder: TuinierColors.border,
+      sectionLabel: TuinierColors.primary,
+      dateIconBackground: TuinierColors.scanHover,
+      dateIconForeground: TuinierColors.headerDark,
+      chipSelectedBackground: TuinierColors.primary,
+      chipSelectedForeground: TuinierColors.card,
+      chipIdleBackground: TuinierColors.background,
+      chipIdleForeground: TuinierColors.textSecondary,
+      activeIcon: TuinierColors.lightGreen,
+      confirmButton: TuinierColors.primary,
+      confirmButtonForeground: TuinierColors.card,
     );
   }
 }

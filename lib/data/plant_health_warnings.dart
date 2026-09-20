@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../models/garden_plant_profile.dart';
+import '../models/plant_ai_analysis.dart';
 import '../models/vegetable.dart';
 import '../widgets/garden_warning_style.dart';
 import 'garden_profile_store.dart';
 import 'plant_ai_insight_mapper.dart';
 import 'my_garden_store.dart';
 import 'plant_age_warnings.dart';
+import 'plant_scan_history.dart';
 import 'planting_timing_advice.dart';
 import 'vegetable_repository.dart';
 
@@ -42,6 +44,11 @@ bool plantHasWarningsTabContent({
   required GardenPlantProfile? profile,
   required Vegetable vegetable,
 }) {
+  if (profile != null &&
+      profile.isPlanted &&
+      plantScanEntries(profile).isNotEmpty) {
+    return true;
+  }
   return plantWarningHighlightLevel(
             profile: profile,
             vegetable: vegetable,
@@ -83,6 +90,9 @@ List<String> activeAiWarningsFor(GardenPlantProfile? profile) {
   final out = <String>[];
   if (ai.insight != null) {
     for (final w in warningsFromInsight(ai.insight)) {
+      if (isPlantingDateMismatchWarning(w) || isCropScanMismatchWarning(w)) {
+        continue;
+      }
       out.add(w);
     }
   }
@@ -90,6 +100,10 @@ List<String> activeAiWarningsFor(GardenPlantProfile? profile) {
     final w = raw.trim();
     if (w.isEmpty) continue;
     if (_isLowPriorityScanInfo(w)) continue;
+    if (isPlantingDateMismatchWarning(w) || isCropScanMismatchWarning(w)) {
+      continue;
+    }
+    if (_legacyWarningSupersededByInsight(w, ai)) continue;
     if (!out.contains(w)) out.add(w);
   }
   final mismatch = ai.cropMismatchWarning?.trim();
@@ -100,6 +114,27 @@ List<String> activeAiWarningsFor(GardenPlantProfile? profile) {
     out.insert(0, mismatch);
   }
   return out;
+}
+
+bool _legacyWarningSupersededByInsight(String warning, PlantAiAnalysis ai) {
+  if (ai.pestLikelyResolvedSincePrevious == true) {
+    final t = warning.toLowerCase();
+    if (t.contains('plaag') ||
+        t.contains('bladluis') ||
+        t.contains('rups') ||
+        t.contains('insect')) {
+      return true;
+    }
+  }
+  final insight = ai.insight;
+  if (insight == null) return false;
+  if (insight.confirmedPests.isEmpty &&
+      insight.confirmedDiseases.isEmpty &&
+      insight.riskLevel.index <= 1) {
+    final t = warning.toLowerCase();
+    if (t.contains('controleer') || t.contains('check')) return true;
+  }
+  return false;
 }
 
 bool _isLowPriorityScanInfo(String text) {
@@ -139,7 +174,9 @@ List<String> activeSeasonWarningsFor({
   required Vegetable vegetable,
 }) {
   if (profile == null || !profile.isPlanted) return const [];
+  if (!profile.isMoestuinActive) return const [];
   if (profile.plantingDateUnknown) return const [];
+  if (profile.seasonBeyondCalendar) return const [];
   if (aiReassuresHarvestThisSeason(profile)) return const [];
   return seasonDisplayFor(
     vegetable: vegetable,
@@ -213,4 +250,58 @@ List<({GardenPlantProfile profile, Vegetable vegetable})>
     }
   }
   return out;
+}
+
+/// Actieve plantproblemen voor tuingezondheid (niet afgevinkt / niet verholpen).
+class PlantHealthIssueCounts {
+  const PlantHealthIssueCounts({
+    required this.dangerPlants,
+    required this.warningPlants,
+    required this.unplantedPlants,
+  });
+
+  /// AI-plagen of ernstige scanwaarschuwingen (niet afgevinkt).
+  final int dangerPlants;
+
+  /// Seizoens- of datum/foto-waarschuwingen.
+  final int warningPlants;
+
+  /// In moestuin maar nog niet als geplant gemarkeerd.
+  final int unplantedPlants;
+
+  int get openIssuePlants => dangerPlants + warningPlants;
+}
+
+PlantHealthIssueCounts countPlantHealthIssues({
+  required GardenProfileStore profileStore,
+  required MyGardenStore gardenStore,
+  required VegetableRepository repository,
+}) {
+  var dangerPlants = 0;
+  var warningPlants = 0;
+  var unplantedPlants = 0;
+
+  for (final id in gardenStore.ids) {
+    final profile = profileStore.activeProfileFor(id);
+    final veg = repository.byId(id);
+    if (profile == null || veg == null) continue;
+
+    if (!profile.isPlanted) unplantedPlants++;
+
+    if (activeAiWarningsFor(profile).isNotEmpty) {
+      dangerPlants++;
+      continue;
+    }
+
+    if (activeSeasonWarningsFor(profile: profile, vegetable: veg).isNotEmpty ||
+        activeDatePhotoWarningsFor(profile).isNotEmpty) {
+      warningPlants++;
+    }
+  }
+
+  return PlantHealthIssueCounts(
+    dangerPlants: dangerPlants,
+    warningPlants: warningPlants,
+    unplantedPlants: unplantedPlants,
+  );
 }

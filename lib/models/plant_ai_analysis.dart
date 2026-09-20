@@ -80,6 +80,7 @@ class PlantAiAnalysis {
     required this.phase,
     required this.phaseLabel,
     this.daysUntilHarvest,
+    this.daysUntilBloom,
     required this.harvestWindowLabel,
     required this.confidencePercent,
     required this.advice,
@@ -102,6 +103,7 @@ class PlantAiAnalysis {
     this.insight,
     this.isHarvestProbeScan = false,
     this.undergroundHarvestNote,
+    this.fruitHarvestNote,
     this.bloomSeasonNote,
   });
 
@@ -109,6 +111,8 @@ class PlantAiAnalysis {
   final PlantAiPhase phase;
   final String phaseLabel;
   final int? daysUntilHarvest;
+  /// Moestuinbloemen: geschatte dagen tot (eerste) bloei op basis van de scan.
+  final int? daysUntilBloom;
   final String harvestWindowLabel;
   final int confidencePercent;
   final String advice;
@@ -168,6 +172,9 @@ class PlantAiAnalysis {
   /// AI-uitleg over mogelijke oogst zonder zichtbare knol/wortel.
   final String? undergroundHarvestNote;
 
+  /// Bij vruchtgewassen: grootte en rijpheid van zichtbare vruchten op de foto.
+  final String? fruitHarvestNote;
+
   /// Bij moestuinbloemen: bloei op haar hoogte (geen eetbare oogst).
   final String? bloomSeasonNote;
 
@@ -188,6 +195,7 @@ class PlantAiAnalysis {
     PlantAiPhase? phase,
     String? phaseLabel,
     int? daysUntilHarvest,
+    int? daysUntilBloom,
     String? harvestWindowLabel,
     int? confidencePercent,
     String? advice,
@@ -210,6 +218,7 @@ class PlantAiAnalysis {
     PlantAiInsightReport? insight,
     bool? isHarvestProbeScan,
     String? undergroundHarvestNote,
+    String? fruitHarvestNote,
     String? bloomSeasonNote,
   }) {
     return PlantAiAnalysis(
@@ -217,6 +226,7 @@ class PlantAiAnalysis {
       phase: phase ?? this.phase,
       phaseLabel: phaseLabel ?? this.phaseLabel,
       daysUntilHarvest: daysUntilHarvest ?? this.daysUntilHarvest,
+      daysUntilBloom: daysUntilBloom ?? this.daysUntilBloom,
       harvestWindowLabel: harvestWindowLabel ?? this.harvestWindowLabel,
       confidencePercent: confidencePercent ?? this.confidencePercent,
       advice: advice ?? this.advice,
@@ -248,6 +258,7 @@ class PlantAiAnalysis {
       isHarvestProbeScan: isHarvestProbeScan ?? this.isHarvestProbeScan,
       undergroundHarvestNote:
           undergroundHarvestNote ?? this.undergroundHarvestNote,
+      fruitHarvestNote: fruitHarvestNote ?? this.fruitHarvestNote,
       bloomSeasonNote: bloomSeasonNote ?? this.bloomSeasonNote,
     );
   }
@@ -257,6 +268,7 @@ class PlantAiAnalysis {
         'phase': phase.name,
         'phaseLabel': phaseLabel,
         'daysUntilHarvest': daysUntilHarvest,
+        if (daysUntilBloom != null) 'daysUntilBloom': daysUntilBloom,
         'harvestWindowLabel': harvestWindowLabel,
         'confidencePercent': confidencePercent,
         'advice': advice,
@@ -290,6 +302,7 @@ class PlantAiAnalysis {
         if (isHarvestProbeScan) 'isHarvestProbeScan': true,
         if (undergroundHarvestNote != null)
           'undergroundHarvestNote': undergroundHarvestNote,
+        if (fruitHarvestNote != null) 'fruitHarvestNote': fruitHarvestNote,
         if (bloomSeasonNote != null) 'bloomSeasonNote': bloomSeasonNote,
       };
 
@@ -301,6 +314,7 @@ class PlantAiAnalysis {
       phase: phase,
       phaseLabel: json['phaseLabel'] as String? ?? phase.label,
       daysUntilHarvest: json['daysUntilHarvest'] as int?,
+      daysUntilBloom: json['daysUntilBloom'] as int?,
       harvestWindowLabel: json['harvestWindowLabel'] as String? ?? '',
       confidencePercent: (json['confidencePercent'] as num?)?.toInt() ?? 70,
       advice: json['advice'] as String? ?? '',
@@ -335,6 +349,7 @@ class PlantAiAnalysis {
           : null,
       isHarvestProbeScan: json['isHarvestProbeScan'] as bool? ?? false,
       undergroundHarvestNote: json['undergroundHarvestNote'] as String?,
+      fruitHarvestNote: json['fruitHarvestNote'] as String?,
       bloomSeasonNote: json['bloomSeasonNote'] as String?,
     );
   }

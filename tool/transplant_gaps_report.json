@@ -1,0 +1,440 @@
+{
+  "count": 80,
+  "counts": {
+    "biet": 5,
+    "sla": 10,
+    "spinazie": 8,
+    "kool": 35,
+    "wortel": 9,
+    "radijs": 3,
+    "tomaat": 9,
+    "paprika": 20,
+    "komkommer": 4,
+    "courgette": 4,
+    "pompoen": 4,
+    "okra": 1,
+    "meloen": 4,
+    "boon": 11,
+    "erwt": 7,
+    "ui": 5,
+    "prei": 3,
+    "knoflook": 3,
+    "aardappel": 4,
+    "zoete_aardappel": 1,
+    "meerjarig": 7,
+    "aubergine": 1,
+    "aardbei": 2,
+    "mais": 2,
+    "kruid_hard": 11,
+    "fruit_boom": 25,
+    "fruit_klimmer": 4,
+    "fruit_bes_zuur": 2,
+    "fruit_bes": 6,
+    "kruid_zacht": 8,
+    "kruid_tropisch": 2,
+    "gember": 1,
+    "tauge": 1
+  },
+  "gaps": [
+    {
+      "id": "wortel",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "paarse_wortel",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "gele_wortel",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "witte_wortel",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "radijs",
+      "profile": "radijs",
+      "reason": "Radijs zaai je vrijwel altijd ter plaatse."
+    },
+    {
+      "id": "pastinaak",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "winterpeen",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "mini_wortel",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "schorseneer",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "rammenas",
+      "profile": "radijs",
+      "reason": "Radijs zaai je vrijwel altijd ter plaatse."
+    },
+    {
+      "id": "zwarte_radijs",
+      "profile": "radijs",
+      "reason": "Radijs zaai je vrijwel altijd ter plaatse."
+    },
+    {
+      "id": "peterseliewortel",
+      "profile": "wortel",
+      "reason": "Wortel hoort ter plaatse gezaaid; uitplanten alleen met speciale diepe trays."
+    },
+    {
+      "id": "okra",
+      "profile": "okra",
+      "reason": "In NL vrijwel alleen kas/zuidmuur/warme kuip. Voorzaaien warm; peulen jong en vaak oogsten."
+    },
+    {
+      "id": "knoflook",
+      "profile": "knoflook",
+      "reason": "Knoflook/sjalot: tenen poten, geen uitplantzaailing."
+    },
+    {
+      "id": "sjalot",
+      "profile": "knoflook",
+      "reason": "Knoflook/sjalot: tenen poten, geen uitplantzaailing."
+    },
+    {
+      "id": "knoflook_hardnekkig",
+      "profile": "knoflook",
+      "reason": "Knoflook/sjalot: tenen poten, geen uitplantzaailing."
+    },
+    {
+      "id": "aardappel",
+      "profile": "aardappel",
+      "reason": "Aardappel: pootgoed, geen klassieke uitplantzaailing. Zoete aardappel is anders (stekken)."
+    },
+    {
+      "id": "vroege_aardappel",
+      "profile": "aardappel",
+      "reason": "Aardappel: pootgoed, geen klassieke uitplantzaailing. Zoete aardappel is anders (stekken)."
+    },
+    {
+      "id": "vastkokende_aardappel",
+      "profile": "aardappel",
+      "reason": "Aardappel: pootgoed, geen klassieke uitplantzaailing. Zoete aardappel is anders (stekken)."
+    },
+    {
+      "id": "kruimige_aardappel",
+      "profile": "aardappel",
+      "reason": "Aardappel: pootgoed, geen klassieke uitplantzaailing. Zoete aardappel is anders (stekken)."
+    },
+    {
+      "id": "zoete_aardappel",
+      "profile": "zoete_aardappel",
+      "reason": "Jan–mrt slips maken van biologische knol; oogst sep–okt (±4–5 maanden); knollen eerst warm/droog curen."
+    },
+    {
+      "id": "aardpeer",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "rabarber",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "asperge",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "groene_asperge",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "witte_asperge",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "zuring",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "artisjok",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "kardoen",
+      "profile": "meerjarig",
+      "reason": "Plantgoed/kronen/scheurlingen. Asperge: jaar 1–2 niet oogsten. Rabarber: neuzen net boven grond. Artisjok: winterbescherming in NL."
+    },
+    {
+      "id": "appel",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "peer",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "kers",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "abrikoos",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "perzik",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "vijg",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "druif",
+      "profile": "fruit_klimmer",
+      "reason": "Druif/braam/framboos: leid ranken langs draad. Snoei verschilt per soort."
+    },
+    {
+      "id": "pruim",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "mango",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "avocado",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "kiwi",
+      "profile": "fruit_klimmer",
+      "reason": "Druif/braam/framboos: leid ranken langs draad. Snoei verschilt per soort."
+    },
+    {
+      "id": "nectarine",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "mirabel",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "kriek",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "zure_kers",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "kweepeer",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "mispel",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "nashi_peer",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "mandarijn",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "citroenboom",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "limoen",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "granaatappel",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "walnoot",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "hazelnoot",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "kastanje_boom",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "kaki",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "framboos",
+      "profile": "fruit_klimmer",
+      "reason": "Druif/braam/framboos: leid ranken langs draad. Snoei verschilt per soort."
+    },
+    {
+      "id": "braam",
+      "profile": "fruit_klimmer",
+      "reason": "Druif/braam/framboos: leid ranken langs draad. Snoei verschilt per soort."
+    },
+    {
+      "id": "blauwe_bes",
+      "profile": "fruit_bes_zuur",
+      "reason": "Blauwe bes, veenbes/cranberry: zure grond is essentieel. Gewone tuingrond is vaak te basisch."
+    },
+    {
+      "id": "rode_bes",
+      "profile": "fruit_bes",
+      "reason": "Rode/zwarte/witte bes, kruisbes, jostabes: snoei jaarlijks oud hout weg."
+    },
+    {
+      "id": "zwarte_bes",
+      "profile": "fruit_bes",
+      "reason": "Rode/zwarte/witte bes, kruisbes, jostabes: snoei jaarlijks oud hout weg."
+    },
+    {
+      "id": "physalis",
+      "profile": "fruit_boom",
+      "reason": "Onderstam bepaalt boomgrootte. Pitfruit: wintersnoei. Steenfruit: snoei liever na oogst/late zomer."
+    },
+    {
+      "id": "jostabes",
+      "profile": "fruit_bes",
+      "reason": "Rode/zwarte/witte bes, kruisbes, jostabes: snoei jaarlijks oud hout weg."
+    },
+    {
+      "id": "vlierbes",
+      "profile": "fruit_bes",
+      "reason": "Rode/zwarte/witte bes, kruisbes, jostabes: snoei jaarlijks oud hout weg."
+    },
+    {
+      "id": "duindoorn",
+      "profile": "fruit_bes",
+      "reason": "Rode/zwarte/witte bes, kruisbes, jostabes: snoei jaarlijks oud hout weg."
+    },
+    {
+      "id": "veenbes",
+      "profile": "fruit_bes_zuur",
+      "reason": "Blauwe bes, veenbes/cranberry: zure grond is essentieel. Gewone tuingrond is vaak te basisch."
+    },
+    {
+      "id": "blauwe_regen_bes",
+      "profile": "fruit_bes",
+      "reason": "Rode/zwarte/witte bes, kruisbes, jostabes: snoei jaarlijks oud hout weg."
+    },
+    {
+      "id": "tijm",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "munt",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "bieslook",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "salie",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "oregano",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "rozemarijn",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "dragon",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "majoraan",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "citroenmelisse",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "estragon",
+      "profile": "kruid_hard",
+      "reason": "Vaste/winterharde kruiden (o.a. citroenmelisse, tijm, salie, oregano, munt in pot)."
+    },
+    {
+      "id": "kerrieblad",
+      "profile": "kruid_tropisch",
+      "reason": "Tropische kruiden zoals citroengras: in NL vaak pot/kas."
+    },
+    {
+      "id": "gember",
+      "profile": "gember",
+      "reason": "Poot rizoomstukken in kuip/kas; vorstvrij overwinteren. Oogst vaak na ±8–10 maanden."
+    },
+    {
+      "id": "citroengras",
+      "profile": "kruid_tropisch",
+      "reason": "Tropische kruiden zoals citroengras: in NL vaak pot/kas."
+    },
+    {
+      "id": "tauge",
+      "profile": "tauge",
+      "reason": "Kiem mungbonen/kiemzaad in keuken (donker, spoelen). Geen tuinuitplant."
+    }
+  ]
+}

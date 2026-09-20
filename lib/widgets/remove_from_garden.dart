@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/garden_history_eligibility.dart';
 import '../data/garden_notifications_sync.dart';
 import '../data/garden_profile_store.dart';
 import '../data/garden_scan_prefs_store.dart';
@@ -23,8 +24,9 @@ Future<bool> confirmAndRemoveFromGarden(
     builder: (ctx) => AlertDialog(
       title: const Text('Uit Mijn moestuin halen?'),
       content: Text(
-        'Weet je zeker dat je ${vegetable.nameNl} uit je moestuin wilt halen? '
-        'Scans en info blijven bewaard in History.',
+        'Weet je zeker dat je ${vegetable.nameNl} uit je moestuin wilt halen?\n\n'
+        'Alleen planten met een scan, geoogst gewas of uitgebloeide planten '
+        'komen in History. Anders wordt alles verwijderd.',
       ),
       actions: [
         TextButton(
@@ -40,8 +42,19 @@ Future<bool> confirmAndRemoveFromGarden(
   );
   if (ok != true) return false;
 
+  final profile = profileStore.profileFor(vegetable.id);
   await gardenStore.remove(vegetable.id);
-  await profileStore.archiveProfile(vegetable.id);
+  var keptInHistory = false;
+  if (profile != null) {
+    if (profileQualifiesForHistory(profile)) {
+      keptInHistory = await profileStore.archiveProfile(
+        vegetable.id,
+        gardenStore: gardenStore,
+      );
+    } else {
+      await profileStore.removeProfile(vegetable.id);
+    }
+  }
   await syncGardenNotifications(
     profileStore: profileStore,
     gardenStore: gardenStore,
@@ -52,7 +65,11 @@ Future<bool> confirmAndRemoveFromGarden(
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${vegetable.nameNl} staat nu in History'),
+        content: Text(
+          keptInHistory
+              ? '${vegetable.nameNl} staat nu in History'
+              : '${vegetable.nameNl} is verwijderd (geen history)',
+        ),
       ),
     );
   }
